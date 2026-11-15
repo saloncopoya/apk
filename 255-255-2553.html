@@ -1,0 +1,2252 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Consolidaciones · CURP</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<style>
+/* ===================== BASE ===================== */
+*,*::before,*::after{box-sizing:border-box}
+:root{
+  --bg:#eef2f7;--surface:#ffffff;--surface-2:#f7f9fc;--surface-3:#eef3fa;
+  --border:#dfe6ef;--border-strong:#c6d2e0;--text:#0f172a;--muted:#64748b;
+  --primary:#2563eb;--primary-2:#1d4ed8;--primary-soft:#e8efff;
+  --success:#059669;--success-soft:#e2f7ef;
+  --warning:#b45309;--warning-soft:#fef3c7;
+  --danger:#dc2626;--danger-soft:#fee2e2;
+  --info:#0e7490;--info-soft:#e0f2fe;
+  --radius:14px;--radius-sm:9px;
+  --shadow:0 1px 2px rgba(15,23,42,.06),0 1px 3px rgba(15,23,42,.06);
+  --shadow-lg:0 18px 45px rgba(15,23,42,.16);
+  --font:"Segoe UI",Roboto,"Helvetica Neue",Arial,system-ui,-apple-system,sans-serif;
+}
+[data-theme="dark"]{
+  --bg:#0a1120;--surface:#101a2b;--surface-2:#0d1524;--surface-3:#16243a;
+  --border:#1e2c44;--border-strong:#2b3d5c;--text:#e6edf7;--muted:#93a4bd;
+  --primary:#3b82f6;--primary-2:#2563eb;--primary-soft:#132a4d;
+  --success:#34d399;--success-soft:#0c2e26;
+  --warning:#fbbf24;--warning-soft:#2e2411;
+  --danger:#f87171;--danger-soft:#331616;
+  --info:#38bdf8;--info-soft:#0c2733;
+}
+html,body{height:100%}
+body{margin:0;font-family:var(--font);background:var(--bg);color:var(--text);
+  -webkit-font-smoothing:antialiased;font-size:14.5px;line-height:1.5;
+  transition:background .25s,color .25s}
+h1,h2,h3,h4{margin:0;font-weight:650;letter-spacing:-.01em}
+p{margin:0}
+button{font-family:inherit;font-size:inherit;cursor:pointer}
+input,select{font-family:inherit;font-size:inherit;color:inherit}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:8px}
+
+/* ===================== LAYOUT ===================== */
+.topbar{position:sticky;top:0;z-index:60;background:color-mix(in srgb,var(--surface) 88%,transparent);
+  backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+.topbar-inner{max-width:1500px;margin:0 auto;padding:14px 22px;display:flex;
+  align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:13px}
+.logo{width:44px;height:44px;border-radius:13px;flex:none;
+  background:linear-gradient(140deg,var(--primary),#7c3aed 90%);color:#fff;
+  display:grid;place-items:center;font-weight:800;font-size:19px;
+  box-shadow:0 6px 18px rgba(37,99,235,.35)}
+.brand h1{font-size:18px;line-height:1.2}
+.brand p{font-size:12.5px;color:var(--muted)}
+.topbar-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.container{max-width:1500px;margin:0 auto;padding:24px 22px 90px;display:flex;flex-direction:column;gap:22px}
+
+/* ===================== CARDS ===================== */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  box-shadow:var(--shadow);overflow:hidden}
+.card-head{display:flex;gap:14px;align-items:flex-start;padding:18px 22px;
+  border-bottom:1px solid var(--border);background:var(--surface-2)}
+.card-head h2{font-size:16px}
+.card-head p{font-size:12.8px;color:var(--muted);margin-top:2px}
+.step{flex:none;width:30px;height:30px;border-radius:50%;background:var(--primary);
+  color:#fff;display:grid;place-items:center;font-weight:700;font-size:14px;
+  box-shadow:0 3px 10px rgba(37,99,235,.35)}
+.card-body{padding:20px 22px}
+
+/* ===================== BUTTONS ===================== */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  border:1px solid var(--border-strong);background:var(--surface);color:var(--text);
+  padding:9px 16px;border-radius:var(--radius-sm);font-weight:600;font-size:13.5px;
+  transition:.16s;white-space:nowrap}
+.btn:hover:not(:disabled){background:var(--surface-3);transform:translateY(-1px)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff;
+  box-shadow:0 4px 14px rgba(37,99,235,.3)}
+.btn.primary:hover:not(:disabled){background:var(--primary-2)}
+.btn.success{background:var(--success);border-color:var(--success);color:#fff}
+.btn.danger{background:var(--danger);border-color:var(--danger);color:#fff}
+.btn.ghost{background:transparent}
+.btn.lg{padding:12px 24px;font-size:14.5px;border-radius:11px}
+.btn.sm{padding:5px 11px;font-size:12.3px;border-radius:8px}
+.btn-icon{border:none;background:transparent;color:var(--muted);width:32px;height:32px;
+  border-radius:8px;display:grid;place-items:center;font-size:15px;transition:.15s}
+.btn-icon:hover{background:var(--danger-soft);color:var(--danger)}
+
+/* ===================== DROPZONE ===================== */
+.dropzone{border:2px dashed var(--border-strong);border-radius:var(--radius);
+  padding:34px 20px;text-align:center;background:var(--surface-2);transition:.2s;
+  display:flex;flex-direction:column;align-items:center;gap:8px}
+.dropzone.drag{border-color:var(--primary);background:var(--primary-soft);transform:scale(1.005)}
+.dz-icon{font-size:38px;line-height:1}
+.dropzone p{font-size:13.5px}
+.hint{font-size:12px;color:var(--muted)}
+.muted{color:var(--muted)}
+
+/* ===================== FILE CARDS ===================== */
+.file-list{display:flex;flex-direction:column;gap:14px;margin-top:18px}
+.file-card{border:1px solid var(--border);border-radius:var(--radius);
+  background:var(--surface);box-shadow:var(--shadow);overflow:hidden}
+.file-card.is-general{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+.file-card-head{display:flex;justify-content:space-between;align-items:center;gap:14px;
+  padding:13px 16px;background:var(--surface-2);border-bottom:1px solid var(--border);flex-wrap:wrap}
+.file-meta{display:flex;align-items:center;gap:11px;min-width:0}
+.file-icon{font-size:22px;flex:none}
+.file-name{font-weight:650;font-size:13.8px;word-break:break-word}
+.file-sub{font-size:11.8px;color:var(--muted)}
+.file-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.role-group{display:flex;background:var(--surface-3);border-radius:9px;padding:3px;
+  gap:2px;border:1px solid var(--border)}
+.role-group label{display:flex;align-items:center;gap:6px;padding:5px 12px;
+  border-radius:7px;font-size:12.4px;font-weight:600;color:var(--muted);cursor:pointer;transition:.15s}
+.role-group input{display:none}
+.role-group label:has(input:checked){background:var(--primary);color:#fff}
+.badge-general{background:var(--primary);color:#fff;font-size:11px;font-weight:700;
+  padding:2px 9px;border-radius:20px}
+.cfg-grid{display:grid;gap:12px;padding:16px;
+  grid-template-columns:repeat(auto-fill,minmax(215px,1fr))}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field > span{font-size:11.6px;font-weight:650;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.04em}
+.field select,.field input[type=number]{width:100%;padding:8px 10px;border-radius:var(--radius-sm);
+  border:1px solid var(--border-strong);background:var(--surface);font-size:13px}
+.field select:focus,.field input:focus{outline:none;border-color:var(--primary);
+  box-shadow:0 0 0 3px var(--primary-soft)}
+.field.warn select{border-color:var(--warning)}
+.preview-wrap{padding:0 16px 16px}
+.preview-title{font-size:11.6px;font-weight:650;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+.preview-scroll{overflow:auto;max-height:190px;border:1px solid var(--border);
+  border-radius:var(--radius-sm)}
+.preview-table{border-collapse:collapse;font-size:11.8px;width:100%;white-space:nowrap}
+.preview-table th,.preview-table td{border-right:1px solid var(--border);
+  border-bottom:1px solid var(--border);padding:5px 9px;text-align:left}
+.preview-table th{background:var(--surface-3);font-weight:700;position:sticky;top:0;z-index:1}
+.preview-table td.col-hl{background:var(--primary-soft);font-weight:600}
+.preview-table .rownum{background:var(--surface-2);color:var(--muted);font-weight:600;
+  position:sticky;left:0}
+
+/* ===================== SETTINGS ===================== */
+.settings-grid{display:grid;gap:16px;
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));margin-bottom:20px}
+.setting{border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;
+  background:var(--surface-2);display:flex;flex-direction:column;gap:8px}
+.setting-title{font-size:13px;font-weight:650}
+.setting-desc{font-size:11.8px;color:var(--muted);line-height:1.45}
+.setting-row{display:flex;align-items:center;gap:10px}
+input[type=range]{flex:1;accent-color:var(--primary);height:5px}
+.range-val{font-variant-numeric:tabular-nums;font-weight:700;font-size:13px;
+  background:var(--primary-soft);color:var(--primary);padding:2px 10px;
+  border-radius:20px;min-width:56px;text-align:center}
+.switch{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
+.switch input{display:none}
+.switch .track{width:42px;height:24px;border-radius:20px;background:var(--border-strong);
+  position:relative;transition:.2s;flex:none}
+.switch .track::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;
+  border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.switch input:checked + .track{background:var(--primary)}
+.switch input:checked + .track::after{transform:translateX(18px)}
+.switch span.label{font-size:13px;font-weight:600}
+.actions-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+
+/* ===================== REPORT ===================== */
+.report-toolbar{display:flex;gap:14px;flex-wrap:wrap;align-items:center;
+  justify-content:space-between;padding:16px 22px;border-bottom:1px solid var(--border);
+  background:var(--surface-2)}
+.stats{display:flex;gap:9px;flex-wrap:wrap}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:7px 13px;display:flex;flex-direction:column;min-width:88px}
+.stat b{font-size:17px;line-height:1.15;font-variant-numeric:tabular-nums}
+.stat span{font-size:10.8px;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.05em;font-weight:650}
+.stat.ok b{color:var(--success)}
+.stat.warn b{color:var(--warning)}
+.stat.bad b{color:var(--danger)}
+.stat.info b{color:var(--primary)}
+.filters{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+.filters input[type=search],.filters select{padding:8px 12px;border-radius:var(--radius-sm);
+  border:1px solid var(--border-strong);background:var(--surface);font-size:13px}
+.filters input[type=search]{min-width:230px}
+.filters input:focus,.filters select:focus{outline:none;border-color:var(--primary);
+  box-shadow:0 0 0 3px var(--primary-soft)}
+.filter-group{display:flex;align-items:center;gap:6px}
+.filter-group label{font-size:11.6px;font-weight:650;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.04em}
+
+.table-wrap{overflow:auto;max-height:68vh}
+table.report{border-collapse:separate;border-spacing:0;width:100%;font-size:12.9px;min-width:1280px}
+table.report thead th{position:sticky;top:0;z-index:5;background:var(--surface-3);
+  text-align:left;padding:10px 11px;font-size:11.2px;text-transform:uppercase;
+  letter-spacing:.045em;color:var(--muted);font-weight:750;
+  border-bottom:1px solid var(--border-strong);white-space:nowrap}
+table.report thead th.sortable{cursor:pointer;user-select:none}
+table.report thead th.sortable:hover{background:var(--primary-soft);color:var(--primary)}
+table.report thead th .sort-ind{margin-left:4px;opacity:.55;font-size:10px}
+table.report thead th.sorted .sort-ind{opacity:1;color:var(--primary)}
+table.report tbody td{padding:9px 11px;border-bottom:1px solid var(--border);
+  vertical-align:top}
+table.report tbody tr:hover{background:var(--surface-2)}
+table.report tbody tr.st-accepted{background:var(--success-soft)}
+table.report tbody tr.st-rejected{background:var(--danger-soft);opacity:.82}
+table.report tbody tr.st-locked{background:var(--surface-3);opacity:.85}
+table.report tbody tr.st-nomatch{opacity:.85}
+.name-cell{font-weight:600;max-width:250px;word-break:break-word}
+.name-src{color:var(--primary);font-weight:650;max-width:250px;word-break:break-word}
+.curp-mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:12.3px;letter-spacing:.02em;font-weight:650}
+.curp-empty{color:var(--muted);font-style:italic;font-weight:400}
+.src-cell{font-size:11.7px;color:var(--muted);max-width:230px;word-break:break-word}
+.src-file{font-weight:650;color:var(--text);display:block}
+.score-pill{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;
+  border-radius:20px;font-weight:750;font-size:11.4px;font-variant-numeric:tabular-nums}
+.score-hi{background:var(--success-soft);color:var(--success)}
+.score-md{background:var(--warning-soft);color:var(--warning)}
+.score-lo{background:var(--danger-soft);color:var(--danger)}
+.method-tag{display:inline-block;font-size:10.4px;font-weight:700;padding:1px 7px;
+  border-radius:20px;margin-left:4px;background:var(--surface-3);color:var(--muted)}
+.tags{display:flex;flex-wrap:wrap;gap:4px}
+.tag{font-size:10.6px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap}
+.tag.error{background:var(--danger-soft);color:var(--danger)}
+.tag.warn{background:var(--warning-soft);color:var(--warning)}
+.tag.info{background:var(--info-soft);color:var(--info)}
+.tag.ok{background:var(--success-soft);color:var(--success)}
+.row-actions{display:flex;gap:6px;flex-wrap:wrap}
+.mini-select{padding:5px 8px;border-radius:8px;border:1px solid var(--border-strong);
+  background:var(--surface);font-size:11.8px;max-width:230px}
+.mini-select:focus{outline:none;border-color:var(--primary);
+  box-shadow:0 0 0 3px var(--primary-soft)}
+input.cb{width:17px;height:17px;accent-color:var(--primary);cursor:pointer}
+.detail-row{background:var(--surface-2)!important;border-bottom:2px solid var(--border-strong)}
+.detail-row td{padding:0!important}
+.detail-box{padding:14px 18px;display:grid;gap:14px;
+  grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.detail-block h4{font-size:12px;text-transform:uppercase;letter-spacing:.05em;
+  color:var(--muted);margin-bottom:6px;font-weight:750}
+.detail-kv{font-size:12.5px;margin-bottom:4px}
+.detail-kv b{color:var(--muted);font-weight:600;display:inline-block;min-width:90px}
+.detail-cand{background:var(--surface);border:1px solid var(--border);
+  border-radius:9px;padding:8px 11px;margin-bottom:6px;font-size:12.3px}
+.detail-cand.is-best{border-color:var(--success);box-shadow:0 0 0 2px var(--success-soft)}
+
+.pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:13px 22px;border-top:1px solid var(--border);background:var(--surface-2);
+  flex-wrap:wrap}
+.page-info{font-size:12.6px;color:var(--muted)}
+.page-btns{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+
+/* ===================== TOASTS / OVERLAY ===================== */
+#toasts{position:fixed;bottom:22px;right:22px;z-index:9999;display:flex;
+  flex-direction:column;gap:9px;max-width:min(400px,calc(100vw - 40px))}
+.toast{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--primary);
+  border-radius:11px;padding:12px 16px;box-shadow:var(--shadow-lg);font-size:13.2px;
+  opacity:0;transform:translateX(24px);transition:.28s;font-weight:550}
+.toast.show{opacity:1;transform:translateX(0)}
+.toast-success{border-left-color:var(--success)}
+.toast-error{border-left-color:var(--danger)}
+.toast-warn{border-left-color:var(--warning)}
+.overlay{position:fixed;inset:0;background:rgba(9,15,28,.62);backdrop-filter:blur(3px);
+  display:none;place-items:center;z-index:9998}
+.overlay.show{display:grid}
+.overlay-box{background:var(--surface);border-radius:16px;padding:30px 38px;
+  text-align:center;box-shadow:var(--shadow-lg);min-width:280px}
+.spinner{width:44px;height:44px;border-radius:50%;margin:0 auto 16px;
+  border:4px solid var(--border);border-top-color:var(--primary);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.overlay-box p{font-weight:650;font-size:14px}
+.overlay-box .sub{font-size:12.4px;color:var(--muted);font-weight:500;margin-top:5px}
+
+.empty-state{text-align:center;padding:40px 20px;color:var(--muted);font-size:13.5px}
+.alert{display:flex;gap:11px;align-items:flex-start;padding:12px 16px;
+  border-radius:11px;font-size:13px;margin-bottom:16px;border:1px solid transparent}
+.alert.warn{background:var(--warning-soft);color:var(--warning);
+  border-color:color-mix(in srgb,var(--warning) 30%,transparent)}
+.alert.info{background:var(--info-soft);color:var(--info);
+  border-color:color-mix(in srgb,var(--info) 30%,transparent)}
+.alert.error{background:var(--danger-soft);color:var(--danger);
+  border-color:color-mix(in srgb,var(--danger) 30%,transparent)}
+
+/* ===================== RESPONSIVE ===================== */
+@media (max-width:860px){
+  .container{padding:16px 13px 80px}
+  .card-body{padding:15px 14px}
+  .card-head{padding:14px}
+  .report-toolbar{padding:13px}
+  .cfg-grid{grid-template-columns:1fr}
+  .brand h1{font-size:16px}
+  .topbar-inner{padding:11px 14px}
+  .stat{min-width:74px;padding:6px 10px}
+  .stat b{font-size:15px}
+  .filters input[type=search]{min-width:100%;flex:1}
+}
+</style>
+</head>
+<body>
+
+<div id="toasts"></div>
+<div class="overlay" id="overlay">
+  <div class="overlay-box">
+    <div class="spinner"></div>
+    <p id="overlayText">Procesando…</p>
+    <p class="sub" id="overlaySub">Esto puede tardar unos segundos</p>
+  </div>
+</div>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <div class="logo">C</div>
+      <div>
+        <h1>Consolidaciones · CURP</h1>
+        <p>Detecta, valida y completa CURP desde múltiples fuentes</p>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn ghost sm" id="themeBtn">🌙 Tema</button>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+
+  <!-- PASO 1 -->
+  <section class="card">
+    <div class="card-head">
+      <span class="step">1</span>
+      <div>
+        <h2>Carga de archivos</h2>
+        <p>Sube el archivo <b>general</b> (destino, al que se le pegarán las CURP) y uno o varios archivos <b>fuente</b> que contengan nombre + CURP.</p>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="dropzone" id="dropzone">
+        <input type="file" id="fileInput" multiple accept=".xlsx,.xls,.xlsm,.csv" hidden>
+        <div class="dz-icon">📂</div>
+        <p><strong>Arrastra y suelta</strong> tus archivos aquí</p>
+        <p class="muted" style="font-size:12.5px">o</p>
+        <button class="btn primary" id="pickBtn">Seleccionar archivos</button>
+        <p class="hint">Formatos soportados: .xlsx · .xls · .xlsm · .csv</p>
+      </div>
+      <div id="fileList" class="file-list"></div>
+    </div>
+  </section>
+
+  <!-- PASO 2 -->
+  <section class="card">
+    <div class="card-head">
+      <span class="step">2</span>
+      <div>
+        <h2>Opciones de consolidación</h2>
+        <p>Ajusta la sensibilidad de la coincidencia y las reglas de aplicación.</p>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="settings-grid">
+
+        <div class="setting">
+          <div class="setting-title">Umbral de revisión</div>
+          <div class="setting-desc">Coincidencias por debajo de este porcentaje se marcan para revisión manual. Si la CURP se verifica con el nombre, no se marca.</div>
+          <div class="setting-row">
+            <input type="range" id="minScore" min="50" max="100" step="1" value="86">
+            <span class="range-val" id="minScoreVal">86%</span>
+          </div>
+        </div>
+
+        <div class="setting">
+          <div class="setting-title">Auto-aceptar coincidencias de alta confianza</div>
+          <div class="setting-desc">Marca como aceptadas las coincidencias que superen el porcentaje indicado (sin alertas graves).</div>
+          <div class="setting-row">
+            <label class="switch">
+              <input type="checkbox" id="autoAccept">
+              <span class="track"></span>
+              <span class="label">Activar</span>
+            </label>
+            <input type="range" id="autoAcceptScore" min="80" max="100" step="1" value="96" disabled>
+            <span class="range-val" id="autoAcceptVal">96%</span>
+          </div>
+        </div>
+
+        <div class="setting">
+          <div class="setting-title">Verificación CURP ↔ Nombre</div>
+          <div class="setting-desc">Si las 4 letras iniciales de la CURP coinciden con el nombre, se marca como verificada y se sube el score a mínimo 97%.</div>
+          <label class="switch">
+            <input type="checkbox" id="verifyCurp" checked>
+            <span class="track"></span>
+            <span class="label">Activar verificación</span>
+          </label>
+        </div>
+
+        <div class="setting">
+          <div class="setting-title">Sobrescribir CURP existentes</div>
+          <div class="setting-desc">Si está activo, también se propondrán CURP para registros que ya tienen una CURP capturada.</div>
+          <label class="switch">
+            <input type="checkbox" id="overwrite">
+            <span class="track"></span>
+            <span class="label">Permitir sobrescritura</span>
+          </label>
+        </div>
+
+        <div class="setting">
+          <div class="setting-title">Descartar CURP inválidas de las fuentes</div>
+          <div class="setting-desc">Omite las CURP que no cumplan con la estructura oficial (18 caracteres y dígito verificador).</div>
+          <label class="switch">
+            <input type="checkbox" id="discardInvalid" checked>
+            <span class="track"></span>
+            <span class="label">Descartar inválidas</span>
+          </label>
+        </div>
+
+      </div>
+
+      <div class="actions-row">
+        <button class="btn primary lg" id="processBtn">⚙️ Procesar consolidación</button>
+        <button class="btn ghost" id="resetBtn">↺ Reiniciar todo</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- PASO 3 -->
+  <section class="card" id="reportCard" hidden>
+    <div class="card-head">
+      <span class="step">3</span>
+      <div>
+        <h2>Revisión de coincidencias</h2>
+        <p>Filtra por tipo de alerta, revisa el nombre de origen y la CURP propuesta, y decide qué aplicar.</p>
+      </div>
+    </div>
+
+    <div class="report-toolbar">
+      <div class="stats" id="stats"></div>
+    </div>
+
+    <div class="report-toolbar" style="border-top:0;padding-top:0">
+      <div class="filters">
+        <input type="search" id="searchBox" placeholder="🔍 Buscar nombre o CURP…">
+        <div class="filter-group">
+          <label for="filterSelect">Filtro</label>
+          <select id="filterSelect">
+            <option value="all">Todos los registros</option>
+            <option value="pending">Solo pendientes</option>
+            <option value="accepted">Solo aceptados</option>
+            <option value="rejected">Solo rechazados</option>
+            <option value="nomatch">Solo sin coincidencia</option>
+            <option value="locked">Solo con CURP previa</option>
+            <optgroup label="Filtrar por alerta">
+              <option value="alert:any">Cualquier alerta</option>
+              <option value="alert:conflict">Conflicto de CURP</option>
+              <option value="alert:invalid_curp">CURP inválida</option>
+              <option value="alert:name_mismatch">Nombre-CURP no coincide</option>
+              <option value="alert:existing_differs">CURP existente difiere</option>
+              <option value="alert:low_score">Coincidencia baja</option>
+              <option value="alert:no_match">Sin coincidencia</option>
+            </optgroup>
+            <optgroup label="Filtrar por informativo">
+              <option value="alert:reordered">Nombre reordenado</option>
+              <option value="alert:typo">Variante ortográfica</option>
+              <option value="alert:fuzzy">Coincidencia aproximada</option>
+              <option value="alert:verified">CURP verificada</option>
+              <option value="alert:locked">Ya tiene CURP</option>
+            </optgroup>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="sourceSelect">Fuente</label>
+          <select id="sourceSelect"><option value="">Todas las fuentes</option></select>
+        </div>
+        <div class="filter-group">
+          <label for="pageSizeSelect">Tamaño</label>
+          <select id="pageSizeSelect">
+            <option value="25">25 / pág.</option>
+            <option value="50" selected>50 / pág.</option>
+            <option value="100">100 / pág.</option>
+            <option value="250">250 / pág.</option>
+            <option value="500">500 / pág.</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="report-toolbar" style="border-top:0;padding-top:0">
+      <div class="row-actions">
+        <button class="btn sm success" id="acceptAllBtn">✔ Aceptar todas las pendientes</button>
+        <button class="btn sm" id="acceptHighBtn">⚡ Aceptar solo alta confianza (≥95%)</button>
+        <button class="btn sm" id="acceptVerifiedBtn">🔒 Aceptar solo CURP verificadas</button>
+        <button class="btn sm" id="acceptNoErrorsBtn">🟢 Aceptar sin alertas graves</button>
+        <button class="btn sm danger" id="rejectAllBtn">✖ Rechazar todas</button>
+        <button class="btn sm ghost" id="clearBtn">↺ Limpiar decisiones</button>
+      </div>
+      <div class="row-actions">
+        <button class="btn sm" id="csvBtn">⬇ Reporte CSV (filtrado)</button>
+        <button class="btn sm primary" id="applyBtn">💾 Aplicar y descargar Excel</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="report">
+        <thead>
+          <tr>
+            <th style="width:38px"><input type="checkbox" class="cb" id="selectAllCb" title="Seleccionar página"></th>
+            <th style="width:66px" class="sortable" data-sort="row">Fila <span class="sort-ind">↕</span></th>
+            <th class="sortable" data-sort="name">Nombre en general <span class="sort-ind">↕</span></th>
+            <th>Nombre en fuente</th>
+            <th style="width:190px">CURP propuesta</th>
+            <th style="width:110px" class="sortable" data-sort="score">Sim. <span class="sort-ind">↕</span></th>
+            <th style="width:190px">Archivo / Fila</th>
+            <th style="width:230px" class="sortable" data-sort="alerts">Alertas <span class="sort-ind">↕</span></th>
+            <th style="width:160px">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="reportBody"></tbody>
+      </table>
+    </div>
+
+    <div class="pagination">
+      <div class="page-info" id="pageInfo"></div>
+      <div class="page-btns" id="pageBtns"></div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+(function(){
+"use strict";
+
+/* =====================================================================
+   0. UTILIDADES
+   ===================================================================== */
+const $  = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+const uid = () => Math.random().toString(36).slice(2,10);
+
+function escapeHtml(v){
+  return String(v === null || v === undefined ? '' : v).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+function toast(msg, type='info', ms=4200){
+  const box = $('#toasts');
+  const el = document.createElement('div');
+  el.className = 'toast toast-' + type;
+  el.textContent = msg;
+  box.appendChild(el);
+  requestAnimationFrame(()=> el.classList.add('show'));
+  setTimeout(()=>{ el.classList.remove('show'); setTimeout(()=>el.remove(),320); }, ms);
+}
+
+function setBusy(show, text, sub){
+  const ov = $('#overlay');
+  if(text) $('#overlayText').textContent = text;
+  $('#overlaySub').textContent = sub || 'Esto puede tardar unos segundos';
+  ov.classList.toggle('show', !!show);
+}
+
+const sleep = (ms=0) => new Promise(r => setTimeout(r, ms));
+
+/* =====================================================================
+   1. NORMALIZACIÓN
+   ===================================================================== */
+const PARTICLES = new Set(['DE','DEL','LA','LAS','LOS','Y','MC','MACK','MAC','VAN','VON','DA','DAS','DO','DOS','DELA','DELLA']);
+
+function stripAccents(s){
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+}
+
+function normName(v){
+  if(v === null || v === undefined) return '';
+  let s = String(v).toUpperCase();
+  s = stripAccents(s);
+  // Normaliza espacios raros
+  s = s.replace(/[\u00A0\u2007\u202F]/g, ' ');
+  s = s.replace(/[^A-Z0-9 ]/g,' ');
+  s = s.replace(/\s+/g,' ').trim();
+  return s;
+}
+
+function cleanTokens(str){
+  return normName(str).split(' ').filter(t => t && !PARTICLES.has(t));
+}
+
+function levenshtein(a,b){
+  const m = a.length, n = b.length;
+  if(!m) return n;
+  if(!n) return m;
+  let prev = new Array(n+1), cur = new Array(n+1);
+  for(let j=0;j<=n;j++) prev[j] = j;
+  for(let i=1;i<=m;i++){
+    cur[0] = i;
+    const ca = a.charCodeAt(i-1);
+    for(let j=1;j<=n;j++){
+      const cost = (ca === b.charCodeAt(j-1)) ? 0 : 1;
+      const x = prev[j] + 1, y = cur[j-1] + 1, z = prev[j-1] + cost;
+      cur[j] = x < y ? (x < z ? x : z) : (y < z ? y : z);
+    }
+    const tmp = prev; prev = cur; cur = tmp;
+  }
+  return prev[n];
+}
+
+function similarity(a,b){
+  const max = Math.max(a.length, b.length);
+  if(max === 0) return 1;
+  return 1 - levenshtein(a,b)/max;
+}
+
+function tokenSymmetry(tokensA, tokensB){
+  if(!tokensA.length || !tokensB.length) return 0;
+  const dir = (A,B) => {
+    let total = 0;
+    for(const ta of A){
+      let best = 0;
+      for(const tb of B){
+        const s = similarity(ta, tb);
+        if(s > best) best = s;
+      }
+      total += best;
+    }
+    return total / A.length;
+  };
+  return (dir(tokensA, tokensB) + dir(tokensB, tokensA)) / 2;
+}
+
+/* =====================================================================
+   2. CURP
+   ===================================================================== */
+const CURP_DICT = '0123456789ABCDEFGHIJKLMNÑOPQRSTUVWXYZ';
+const CURP_RE   = /^[A-Z][AEIOUX][A-Z]{2}\d{6}[HM][A-Z]{2}[B-DF-HJ-NP-TV-Z]{3}[A-Z0-9]\d$/;
+const ESTADOS = new Set(['AS','BC','BS','CC','CL','CM','CS','CH','DF','DG','GT','GR','HG','JC','MC','MN','MS','NT','NL','OC','PL','QT','QR','SP','SL','SR','TC','TS','TL','VZ','YN','ZS','NE']);
+
+function cleanCurp(v){
+  if(v === null || v === undefined) return '';
+  return String(v).toUpperCase().replace(/[^A-Z0-9Ñ]/g,'');
+}
+
+function isValidCurp(curp){
+  if(!curp || curp.length !== 18) return false;
+  if(!CURP_RE.test(curp)) return false;
+  if(!ESTADOS.has(curp.substring(11,13))) return false;
+  const expected = curpCheckDigit(curp.substring(0,17));
+  if(expected === null) return false;
+  return curp.charAt(17) === expected;
+}
+
+function curpCheckDigit(base17){
+  let sum = 0;
+  for(let i=0;i<17;i++){
+    const val = CURP_DICT.indexOf(base17.charAt(i));
+    if(val < 0) return null;
+    sum += val * (18 - i);
+  }
+  return String((10 - (sum % 10)) % 10);
+}
+
+function firstInternalVowel(word){
+  for(let i=1;i<word.length;i++){
+    if('AEIOU'.indexOf(word.charAt(i)) >= 0) return word.charAt(i);
+  }
+  return 'X';
+}
+
+function expectedCurpPrefix(paterno, materno, nombres){
+  const pT = cleanTokens(paterno || '');
+  const mT = cleanTokens(materno || '');
+  const nT = cleanTokens(nombres || '');
+  const base = pT.length ? pT : mT;
+  if(!base.length) return null;
+
+  const l1 = base[0].charAt(0) || 'X';
+  const l2 = firstInternalVowel(base[0]);
+  let l3 = 'X';
+  if(pT.length && mT.length) l3 = mT[0].charAt(0);
+  else if(!pT.length && mT.length > 1) l3 = mT[1].charAt(0);
+
+  let first = nT[0] || '';
+  if(/^(MARIA|JOSE|MA|J)$/.test(first) && nT[1]) first = nT[1];
+  const l4 = first ? first.charAt(0) : 'X';
+
+  return l1 + l2 + l3 + l4;
+}
+
+function bestCurpNameMatch(curpPrefix, tokens){
+  if(!curpPrefix || curpPrefix.length < 4) return null;
+  if(tokens.length < 2) return null;
+
+  let best = -1, bestInfo = null;
+
+  for(let i=0;i<tokens.length-1;i++){
+    const paterno = tokens[i];
+    const materno = tokens[i+1];
+    const givenTokens = [];
+    for(let j=0;j<tokens.length;j++){
+      if(j !== i && j !== i+1) givenTokens.push(tokens[j]);
+    }
+    if(!givenTokens.length) continue;
+
+    const expected = expectedCurpPrefix(paterno, materno, givenTokens.join(' '));
+    if(!expected) continue;
+
+    let m = 0;
+    for(let k=0;k<4;k++){
+      const e = expected.charAt(k);
+      const a = curpPrefix.charAt(k);
+      if(e === 'X' || a === 'X') m += 0.5;
+      else if(e === a) m += 1;
+    }
+    if(m > best){
+      best = m;
+      bestInfo = { expected, paterno, materno, nombres: givenTokens.join(' ') };
+    }
+  }
+
+  if(best < 0) return null;
+  return Object.assign({ matched: best }, bestInfo);
+}
+
+/* =====================================================================
+   3. CATEGORÍAS DE ALERTA
+   ===================================================================== */
+const ALERT = {
+  CONFLICT:         { id: 'conflict',         label: 'Conflicto de CURP',           level: 'error' },
+  INVALID_CURP:     { id: 'invalid_curp',     label: 'CURP inválida',               level: 'warn'  },
+  NAME_MISMATCH:    { id: 'name_mismatch',    label: 'Nombre-CURP no coincide',     level: 'warn'  },
+  EXISTING_DIFFERS: { id: 'existing_differs', label: 'CURP existente difiere',      level: 'warn'  },
+  LOW_SCORE:        { id: 'low_score',        label: 'Coincidencia baja',           level: 'warn'  },
+  NO_MATCH:         { id: 'no_match',         label: 'Sin coincidencia',            level: 'warn'  },
+  REORDERED:        { id: 'reordered',        label: 'Nombre reordenado',           level: 'info'  },
+  TYPO:             { id: 'typo',             label: 'Variante ortográfica',        level: 'info'  },
+  FUZZY:            { id: 'fuzzy',            label: 'Coincidencia aproximada',     level: 'info'  },
+  VERIFIED:         { id: 'verified',         label: '✓ CURP verificada',           level: 'ok'    },
+  LOCKED:           { id: 'locked',           label: 'Ya tiene CURP',               level: 'info'  }
+};
+
+/* =====================================================================
+   4. ESTADO
+   ===================================================================== */
+const state = {
+  files: [],
+  generalId: null,
+  proposals: [],
+  filtered: [],
+  page: 1,
+  pageSize: 50,
+  filter: 'all',
+  sourceFilter: '',
+  search: '',
+  sortBy: 'row',
+  sortDir: 'asc',
+  expanded: new Set(),
+  processed: false
+};
+
+const settings = {
+  minScore: 0.86,
+  autoAccept: false,
+  autoAcceptScore: 0.96,
+  verifyCurp: true,
+  overwrite: false,
+  discardInvalid: true
+};
+
+/* =====================================================================
+   5. LECTURA DE EXCEL
+   ===================================================================== */
+function cellText(cell){
+  if(!cell) return '';
+  if(cell.t === 's') return String(cell.v === undefined || cell.v === null ? '' : cell.v);
+  if(cell.w !== undefined && cell.w !== null) return String(cell.w);
+  if(cell.v === undefined || cell.v === null) return '';
+  return String(cell.v);
+}
+
+function sheetToAOA(ws){
+  if(!ws || !ws['!ref']) return { aoa: [], rowOffset: 0, colOffset: 0, maxCols: 0 };
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  const aoa = [];
+  for(let r = range.s.r; r <= range.e.r; r++){
+    const row = [];
+    for(let c = range.s.c; c <= range.e.c; c++){
+      row.push(cellText(ws[XLSX.utils.encode_cell({ r, c })]));
+    }
+    aoa.push(row);
+  }
+  return {
+    aoa,
+    rowOffset: range.s.r,
+    colOffset: range.s.c,
+    maxCols: range.e.c - range.s.c + 1
+  };
+}
+
+function loadSheet(entry){
+  const ws = entry.wb.Sheets[entry.sheetName];
+  const data = sheetToAOA(ws);
+  entry.aoa = data.aoa;
+  entry.rowOffset = data.rowOffset;
+  entry.colOffset = data.colOffset;
+  entry.maxCols = data.maxCols;
+}
+
+async function addFiles(fileList){
+  const files = Array.from(fileList || []);
+  if(!files.length) return;
+
+  if(typeof XLSX === 'undefined'){
+    toast('No se pudo cargar la librería XLSX.', 'error', 8000);
+    return;
+  }
+
+  setBusy(true, 'Leyendo archivos…', 'Preparando las hojas');
+
+  for(const f of files){
+    if(!/\.(xlsx|xls|xlsm|csv)$/i.test(f.name)){
+      toast('Formato no soportado: ' + f.name, 'error');
+      continue;
+    }
+    try{
+      const buf = await f.arrayBuffer();
+      const wb = XLSX.read(new Uint8Array(buf), {
+        type: 'array', cellText: true, cellDates: false, cellNF: false, cellStyles: false
+      });
+      const entry = {
+        id: uid(), fileName: f.name, wb,
+        sheetNames: wb.SheetNames.slice(), sheetName: wb.SheetNames[0],
+        aoa: [], rowOffset: 0, colOffset: 0, maxCols: 0,
+        role: 'source', headerRow: 1,
+        nameMode: 'single', nameCol: null, patCol: null, matCol: null, nomCol: null, curpCol: null
+      };
+      loadSheet(entry);
+      autoDetect(entry);
+      state.files.push(entry);
+      await sleep(0);
+    }catch(err){
+      console.error(err);
+      toast('Error al leer ' + f.name + ': ' + err.message, 'error', 6000);
+    }
+  }
+
+  if(!state.generalId && state.files.length){
+    state.files.forEach(f => f.role = 'source');
+    state.files[0].role = 'general';
+    state.generalId = state.files[0].id;
+  }
+
+  setBusy(false);
+  renderFiles();
+  toast(files.length + ' archivo(s) cargado(s).', 'success');
+}
+
+function autoDetect(entry){
+  const cols = getColumnInfo(entry);
+  if(!cols.length) return;
+  const hdr = c => stripAccents(String(c.header || '').toUpperCase()).trim();
+
+  let curpIdx = null;
+  for(const c of cols){ if(hdr(c).includes('CURP')){ curpIdx = c.index; break; } }
+
+  let patIdx = null, matIdx = null, nomIdx = null;
+  for(const c of cols){
+    const h = hdr(c);
+    if(patIdx === null && /APELLIDO\s*PATERNO|PRIMER\s*APELLIDO|PATERNO/.test(h)) patIdx = c.index;
+    if(matIdx === null && /APELLIDO\s*MATERNO|SEGUNDO\s*APELLIDO|MATERNO/.test(h)) matIdx = c.index;
+    if(nomIdx === null && /^(NOMBRE|NOMBRES)(\s|$)/.test(h) && !/COMPLETO/.test(h) && !/SERVIDOR/.test(h) && !/CALLE/.test(h)) nomIdx = c.index;
+  }
+
+  let nameIdx = null;
+  for(const c of cols){ if(hdr(c) === 'NOMBRE COMPLETO'){ nameIdx = c.index; break; } }
+  if(nameIdx === null){
+    for(const c of cols){
+      const h = hdr(c);
+      if(h.includes('NOMBRE') && !h.includes('SERVIDOR') && !h.includes('CALLE') && !h.includes('COLONIA') && !h.includes('APELLIDO')){ nameIdx = c.index; break; }
+    }
+  }
+  if(nameIdx === null){
+    for(const c of cols){ if(hdr(c).includes('NOMBRE')){ nameIdx = c.index; break; } }
+  }
+
+  entry.curpCol = curpIdx;
+  if(patIdx !== null && nomIdx !== null && matIdx !== null){
+    entry.nameMode = 'split';
+    entry.patCol = patIdx; entry.matCol = matIdx; entry.nomCol = nomIdx;
+    entry.nameCol = null;
+  }else{
+    entry.nameMode = 'single';
+    entry.nameCol = nameIdx;
+    entry.patCol = null; entry.matCol = null; entry.nomCol = null;
+  }
+}
+
+/* =====================================================================
+   6. COLUMNAS / UI ARCHIVOS
+   ===================================================================== */
+function getColumnInfo(entry){
+  const out = [];
+  const n = entry.maxCols || 0;
+  const hdrRow = (entry.headerRow > 0) ? entry.aoa[entry.headerRow - 1] : null;
+  for(let c = 0; c < n; c++){
+    out.push({
+      index: c,
+      letter: XLSX.utils.encode_col(entry.colOffset + c),
+      header: hdrRow ? String(hdrRow[c] === undefined || hdrRow[c] === null ? '' : hdrRow[c]).trim() : ''
+    });
+  }
+  return out;
+}
+
+function optionsHTML(cols, selected, placeholder){
+  const sel = (selected === null || selected === undefined || selected === '') ? -1 : Number(selected);
+  let html = '';
+  if(placeholder) html += '<option value="">' + escapeHtml(placeholder) + '</option>';
+  for(const c of cols){
+    html += '<option value="' + c.index + '"' + (sel === c.index ? ' selected' : '') + '>'
+         + c.letter + ' — ' + escapeHtml(c.header || '(vacío)') + '</option>';
+  }
+  return html;
+}
+
+function renderFiles(){
+  const wrap = $('#fileList');
+  wrap.innerHTML = '';
+  if(!state.files.length){
+    wrap.innerHTML = '<div class="empty-state">Aún no has cargado ningún archivo.</div>';
+    return;
+  }
+  state.files.forEach(entry => wrap.appendChild(buildFileCard(entry)));
+}
+
+function buildFileCard(entry){
+  const card = document.createElement('div');
+  card.className = 'file-card' + (entry.role === 'general' ? ' is-general' : '');
+  card.dataset.id = entry.id;
+  const cols = getColumnInfo(entry);
+  const isGeneral = entry.role === 'general';
+
+  const head = document.createElement('div');
+  head.className = 'file-card-head';
+  head.innerHTML =
+    '<div class="file-meta">' +
+      '<span class="file-icon">' + (isGeneral ? '🎯' : '📄') + '</span>' +
+      '<div>' +
+        '<div class="file-name">' + escapeHtml(entry.fileName) +
+          (isGeneral ? ' <span class="badge-general">GENERAL</span>' : '') +
+        '</div>' +
+        '<div class="file-sub">' + entry.aoa.length + ' filas · ' + entry.maxCols + ' columnas · ' +
+          entry.sheetNames.length + ' hoja(s)</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="file-actions">' +
+      '<div class="role-group">' +
+        '<label><input type="radio" name="role-' + entry.id + '" data-cfg="role" value="general"' +
+          (isGeneral ? ' checked' : '') + '><span>General</span></label>' +
+        '<label><input type="radio" name="role-' + entry.id + '" data-cfg="role" value="source"' +
+          (!isGeneral ? ' checked' : '') + '><span>Fuente</span></label>' +
+      '</div>' +
+      '<button class="btn-icon" data-action="remove" title="Quitar archivo">✕</button>' +
+    '</div>';
+  card.appendChild(head);
+
+  const cfg = document.createElement('div');
+  cfg.className = 'cfg-grid';
+
+  const sheetOpts = entry.sheetNames.map(s =>
+    '<option value="' + escapeHtml(s) + '"' + (s === entry.sheetName ? ' selected' : '') + '>' +
+    escapeHtml(s) + '</option>').join('');
+
+  let html = '';
+  html += '<label class="field"><span>Hoja</span>' +
+          '<select data-cfg="sheetName">' + sheetOpts + '</select></label>';
+  html += '<label class="field"><span>Fila de encabezados (0 = sin encabezado)</span>' +
+          '<input type="number" min="0" max="50" step="1" data-cfg="headerRow" value="' + entry.headerRow + '"></label>';
+  html += '<label class="field"><span>El nombre está en</span>' +
+          '<select data-cfg="nameMode">' +
+            '<option value="single"' + (entry.nameMode === 'single' ? ' selected' : '') + '>Una sola columna</option>' +
+            '<option value="split"'  + (entry.nameMode === 'split'  ? ' selected' : '') + '>Varias columnas</option>' +
+          '</select></label>';
+
+  if(entry.nameMode === 'single'){
+    html += '<label class="field' + (entry.nameCol === null ? ' warn' : '') + '"><span>Columna NOMBRE</span>' +
+            '<select data-cfg="nameCol">' + optionsHTML(cols, entry.nameCol, '— Selecciona —') + '</select></label>';
+  }else{
+    html += '<label class="field' + (entry.patCol === null ? ' warn' : '') + '"><span>Apellido paterno</span>' +
+            '<select data-cfg="patCol">' + optionsHTML(cols, entry.patCol, '— Selecciona —') + '</select></label>';
+    html += '<label class="field' + (entry.matCol === null ? ' warn' : '') + '"><span>Apellido materno</span>' +
+            '<select data-cfg="matCol">' + optionsHTML(cols, entry.matCol, '— (opcional) —') + '</select></label>';
+    html += '<label class="field' + (entry.nomCol === null ? ' warn' : '') + '"><span>Nombre(s)</span>' +
+            '<select data-cfg="nomCol">' + optionsHTML(cols, entry.nomCol, '— Selecciona —') + '</select></label>';
+  }
+
+  html += '<label class="field' + (entry.curpCol === null ? ' warn' : '') + '"><span>Columna CURP' +
+          (isGeneral ? ' (destino)' : ' (origen)') + '</span>' +
+          '<select data-cfg="curpCol">' + optionsHTML(cols, entry.curpCol, '— Selecciona —') + '</select></label>';
+
+  cfg.innerHTML = html;
+  card.appendChild(cfg);
+
+  const prev = document.createElement('div');
+  prev.className = 'preview-wrap';
+  prev.innerHTML = buildPreviewHTML(entry, cols);
+  card.appendChild(prev);
+
+  return card;
+}
+
+function buildPreviewHTML(entry, cols){
+  if(!entry.aoa.length) return '<div class="preview-title">Vista previa</div><div class="empty-state">Hoja vacía</div>';
+  const maxCols = Math.min(entry.maxCols, 14);
+  const hdrRow = entry.headerRow > 0 ? entry.headerRow - 1 : -1;
+
+  const highlight = new Set();
+  if(entry.nameMode === 'single' && entry.nameCol !== null) highlight.add(entry.nameCol);
+  if(entry.nameMode === 'split'){
+    if(entry.patCol !== null) highlight.add(entry.patCol);
+    if(entry.matCol !== null) highlight.add(entry.matCol);
+    if(entry.nomCol !== null) highlight.add(entry.nomCol);
+  }
+  if(entry.curpCol !== null) highlight.add(entry.curpCol);
+
+  let html = '<div class="preview-title">Vista previa</div><div class="preview-scroll"><table class="preview-table"><thead><tr><th class="rownum">#</th>';
+  for(let c = 0; c < maxCols; c++){
+    const letter = XLSX.utils.encode_col(entry.colOffset + c);
+    const hText = hdrRow >= 0 && entry.aoa[hdrRow] ? String(entry.aoa[hdrRow][c] || '') : '';
+    html += '<th' + (highlight.has(c) ? ' style="color:var(--primary)"' : '') + '>' +
+      letter + (hText ? ' · ' + escapeHtml(hText).slice(0, 22) : '') + '</th>';
+  }
+  html += '</tr></thead><tbody>';
+
+  const start = entry.headerRow > 0 ? entry.headerRow : 0;
+  const limit = Math.min(entry.aoa.length, start + 4);
+
+  for(let r = start; r < limit; r++){
+    const row = entry.aoa[r] || [];
+    html += '<tr><td class="rownum">' + (entry.rowOffset + r + 1) + '</td>';
+    for(let c = 0; c < maxCols; c++){
+      const v = row[c] === undefined || row[c] === null ? '' : String(row[c]);
+      html += '<td' + (highlight.has(c) ? ' class="col-hl"' : '') + '>' +
+        escapeHtml(v.length > 32 ? v.slice(0, 32) + '…' : v) + '</td>';
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table></div>';
+  return html;
+}
+
+/* =====================================================================
+   7. EVENTOS DE ARCHIVO
+   ===================================================================== */
+function bindFileListEvents(){
+  const wrap = $('#fileList');
+
+  wrap.addEventListener('change', function(e){
+    const card = e.target.closest('.file-card');
+    if(!card) return;
+    const entry = state.files.find(f => f.id === card.dataset.id);
+    if(!entry) return;
+
+    const cfg = e.target.dataset.cfg;
+    if(!cfg) return;
+
+    if(cfg === 'role'){
+      if(e.target.value === 'general'){
+        state.files.forEach(f => f.role = (f.id === entry.id) ? 'general' : 'source');
+        state.generalId = entry.id;
+      }else{
+        entry.role = 'source';
+        if(state.generalId === entry.id) state.generalId = null;
+      }
+      renderFiles();
+      return;
+    }
+
+    if(cfg === 'sheetName'){
+      entry.sheetName = e.target.value;
+      loadSheet(entry);
+      entry.nameCol = entry.patCol = entry.matCol = entry.nomCol = entry.curpCol = null;
+      autoDetect(entry);
+      renderFiles();
+      return;
+    }
+
+    if(cfg === 'headerRow'){
+      let n = parseInt(e.target.value, 10);
+      if(isNaN(n) || n < 0) n = 0;
+      entry.headerRow = n;
+      renderFiles();
+      return;
+    }
+
+    if(cfg === 'nameMode'){
+      entry.nameMode = e.target.value;
+      renderFiles();
+      return;
+    }
+
+    const asIndex = v => (v === '' ? null : Number(v));
+    if(cfg === 'nameCol') entry.nameCol = asIndex(e.target.value);
+    if(cfg === 'patCol')  entry.patCol  = asIndex(e.target.value);
+    if(cfg === 'matCol')  entry.matCol  = asIndex(e.target.value);
+    if(cfg === 'nomCol')  entry.nomCol  = asIndex(e.target.value);
+    if(cfg === 'curpCol') entry.curpCol = asIndex(e.target.value);
+
+    renderFiles();
+  });
+
+  wrap.addEventListener('click', function(e){
+    const btn = e.target.closest('[data-action="remove"]');
+    if(!btn) return;
+    const id = btn.closest('.file-card').dataset.id;
+    state.files = state.files.filter(f => f.id !== id);
+    if(state.generalId === id){
+      state.generalId = null;
+      if(state.files.length){
+        state.files[0].role = 'general';
+        state.generalId = state.files[0].id;
+      }
+    }
+    renderFiles();
+  });
+}
+
+/* =====================================================================
+   8. EXTRACCIÓN DE REGISTROS
+   ===================================================================== */
+function getNameRaw(entry, row){
+  if(entry.nameMode === 'single'){
+    if(entry.nameCol === null) return '';
+    const v = row[entry.nameCol];
+    return v === undefined || v === null ? '' : String(v);
+  }
+  const p = entry.patCol !== null ? (row[entry.patCol] || '') : '';
+  const m = entry.matCol !== null ? (row[entry.matCol] || '') : '';
+  const n = entry.nomCol !== null ? (row[entry.nomCol] || '') : '';
+  return [p, m, n].map(x => String(x || '').trim()).filter(Boolean).join(' ');
+}
+
+function extractRecords(entry){
+  const out = [];
+  if(!entry.aoa.length) return out;
+  const start = entry.headerRow > 0 ? entry.headerRow : 0;
+
+  for(let i = start; i < entry.aoa.length; i++){
+    const row = entry.aoa[i] || [];
+    let isEmpty = true;
+    for(let c = 0; c < row.length; c++){
+      if(row[c] !== undefined && row[c] !== null && String(row[c]).trim() !== ''){ isEmpty = false; break; }
+    }
+    if(isEmpty) continue;
+
+    const rawName = getNameRaw(entry, row).trim();
+    const curpRaw = entry.curpCol !== null ? row[entry.curpCol] : '';
+    if(!rawName && !curpRaw) continue;
+
+    const normalized = normName(rawName);
+    const tokens = cleanTokens(rawName);
+    const sortedKey = tokens.slice().sort().join(' ');
+
+    let parts = null;
+    if(entry.nameMode === 'split'){
+      parts = {
+        paterno: entry.patCol !== null ? String(row[entry.patCol] || '') : '',
+        materno: entry.matCol !== null ? String(row[entry.matCol] || '') : '',
+        nombres: entry.nomCol !== null ? String(row[entry.nomCol] || '') : ''
+      };
+    }
+
+    out.push({
+      fileId: entry.id, fileName: entry.fileName,
+      rowIndex: i, displayRow: entry.rowOffset + i + 1,
+      rawName, normName: normalized, tokens, sortedKey,
+      curp: cleanCurp(curpRaw), curpRaw: String(curpRaw || ''),
+      parts
+    });
+  }
+  return out;
+}
+
+/* =====================================================================
+   9. DETECCIÓN DE MÉTODOS (exact, reordered, typo, fuzzy)
+   ===================================================================== */
+function detectMethod(target, rec){
+  // 1) Exacta
+  if(target.normName === rec.normName){
+    return { score: 1.0, method: 'exact' };
+  }
+
+  // 2) Mismos tokens (reordenados)
+  if(target.sortedKey === rec.sortedKey && target.tokens.length === rec.tokens.length){
+    return { score: 0.99, method: 'reordered' };
+  }
+
+  // 3) Variante ortográfica: mismo número de tokens, alta similitud uno-a-uno
+  if(target.tokens.length === rec.tokens.length && target.tokens.length > 0){
+    let totalSim = 0;
+    for(const ta of target.tokens){
+      let best = 0;
+      for(const tb of rec.tokens){
+        const s = similarity(ta, tb);
+        if(s > best) best = s;
+      }
+      totalSim += best;
+    }
+    const avgSim = totalSim / target.tokens.length;
+    if(avgSim >= 0.85 && avgSim < 0.995){
+      return { score: Math.max(0.93, Math.min(0.985, avgSim)), method: 'typo' };
+    }
+  }
+
+  // 4) Fuzzy general
+  const tokScore = tokenSymmetry(target.tokens, rec.tokens);
+  const levScore = similarity(target.sortedKey, rec.sortedKey);
+  const score = 0.6 * tokScore + 0.4 * levScore;
+  return { score, method: 'fuzzy' };
+}
+
+/* =====================================================================
+   10. BOOST POR VERIFICACIÓN CURP ↔ NOMBRE
+   ===================================================================== */
+function applyCurpVerificationBoost(cand){
+  if(!settings.verifyCurp) return;
+  const rec = cand.rec;
+  if(!rec.curp || !isValidCurp(rec.curp)) return;
+
+  const prefix = rec.curp.substring(0, 4);
+  let matchInfo = null;
+
+  if(rec.parts && (rec.parts.paterno || rec.parts.materno)){
+    const expected = expectedCurpPrefix(rec.parts.paterno, rec.parts.materno, rec.parts.nombres);
+    if(expected){
+      let m = 0;
+      for(let k = 0; k < 4; k++){
+        const e = expected.charAt(k), a = prefix.charAt(k);
+        if(e === 'X' || a === 'X') m += 0.5;
+        else if(e === a) m += 1;
+      }
+      matchInfo = { matched: m, expected };
+    }
+  }else if(rec.tokens && rec.tokens.length >= 2){
+    matchInfo = bestCurpNameMatch(prefix, rec.tokens);
+  }
+
+  cand.curpMatch = matchInfo;
+  if(matchInfo && matchInfo.matched >= 3.5){
+    cand.curpVerified = true;
+    cand.score = Math.max(cand.score, 0.97);
+  }else if(matchInfo && matchInfo.matched >= 3){
+    cand.curpVerified = true;
+    cand.score = Math.max(cand.score, 0.93);
+  }
+}
+
+/* =====================================================================
+   11. BÚSQUEDA DE CANDIDATOS
+   ===================================================================== */
+function pushToMap(map, key, value){
+  if(!key) return;
+  let arr = map.get(key);
+  if(!arr){ arr = []; map.set(key, arr); }
+  arr.push(value);
+}
+
+function buildIndex(records){
+  const byExact = new Map(), bySorted = new Map(), byToken = new Map(), byInitial = new Map();
+  for(const r of records){
+    if(!r.normName) continue;
+    pushToMap(byExact, r.normName, r);
+    pushToMap(bySorted, r.sortedKey, r);
+    const seen = new Set();
+    for(const t of r.tokens){
+      if(seen.has(t)) continue;
+      seen.add(t);
+      pushToMap(byToken, t, r);
+    }
+    pushToMap(byInitial, r.sortedKey.charAt(0), r);
+  }
+  return { byExact, bySorted, byToken, byInitial };
+}
+
+function findCandidates(target, index, maxResults){
+  const MAX_POOL = 5000;
+  const results = new Map();
+
+  const addResult = (rec, score, method) => {
+    const key = rec.fileId + '::' + rec.rowIndex;
+    const prev = results.get(key);
+    if(!prev || prev.score < score){
+      results.set(key, { rec, score, method });
+    }
+  };
+
+  // 1) Exacta
+  const exact = index.byExact.get(target.normName);
+  if(exact) for(const rec of exact) addResult(rec, 1.0, 'exact');
+
+  // 2) Reordenada
+  const sortedHits = index.bySorted.get(target.sortedKey);
+  if(sortedHits) for(const rec of sortedHits) addResult(rec, 0.99, 'reordered');
+
+  // 3) Difusa
+  if(results.size === 0){
+    let pool = null, poolSize = Infinity;
+    for(const t of target.tokens){
+      const bucket = index.byToken.get(t);
+      if(bucket && bucket.length < poolSize){ pool = bucket; poolSize = bucket.length; }
+    }
+    if(!pool || poolSize > MAX_POOL){
+      const b = index.byInitial.get(target.sortedKey.charAt(0));
+      if(b) pool = b;
+    }
+
+    if(pool){
+      for(const rec of pool){
+        if(Math.abs(rec.tokens.length - target.tokens.length) > 2) continue;
+        const { score, method } = detectMethod(target, rec);
+        if(score >= 0.6){
+          addResult(rec, score, method);
+        }
+      }
+    }
+  }
+
+  const arr = Array.from(results.values());
+  arr.sort((a, b) => b.score - a.score);
+
+  // Dedupe por CURP + archivo
+  const out = [];
+  const seen = new Set();
+  for(const item of arr){
+    const k = item.rec.fileId + '|' + (item.rec.curp || item.rec.rowIndex);
+    if(seen.has(k)) continue;
+    seen.add(k);
+    // Aplicar boost de verificación CURP
+    applyCurpVerificationBoost(item);
+    out.push(item);
+    if(out.length >= (maxResults || 5)) break;
+  }
+
+  // Reordenar después del boost
+  out.sort((a, b) => b.score - a.score);
+  return out;
+}
+
+/* =====================================================================
+   12. ALERTAS
+   ===================================================================== */
+function computeIssues(proposal){
+  const issues = [];
+  const cand = proposal.candidates[proposal.chosen];
+
+  if(proposal.locked){
+    issues.push({ type: ALERT.LOCKED.id, level: ALERT.LOCKED.level, label: ALERT.LOCKED.label });
+    return issues;
+  }
+
+  if(!cand){
+    issues.push({ type: ALERT.NO_MATCH.id, level: ALERT.NO_MATCH.level, label: ALERT.NO_MATCH.label });
+    return issues;
+  }
+
+  const rec = cand.rec;
+
+  // Conflicto: varias CURP distintas por encima del umbral
+  const distinct = new Set();
+  for(const c of proposal.candidates){
+    if(c.score >= settings.minScore - 0.001 && c.rec.curp) distinct.add(c.rec.curp);
+  }
+  if(distinct.size > 1){
+    issues.push({ type: ALERT.CONFLICT.id, level: ALERT.CONFLICT.level,
+                  label: ALERT.CONFLICT.label + ' (' + distinct.size + ')' });
+  }
+
+  // CURP inválida
+  if(rec.curp && !isValidCurp(rec.curp)){
+    issues.push({ type: ALERT.INVALID_CURP.id, level: ALERT.INVALID_CURP.level, label: ALERT.INVALID_CURP.label });
+  }
+
+  // Verificación CURP ↔ Nombre
+  if(cand.curpVerified){
+    issues.push({ type: ALERT.VERIFIED.id, level: ALERT.VERIFIED.level, label: ALERT.VERIFIED.label });
+  }else if(cand.curpMatch && cand.curpMatch.matched <= 1.5){
+    issues.push({ type: ALERT.NAME_MISMATCH.id, level: ALERT.NAME_MISMATCH.level, label: ALERT.NAME_MISMATCH.label });
+  }
+
+  // CURP existente difiere
+  if(proposal.existingCurp && rec.curp && proposal.existingCurp !== rec.curp){
+    issues.push({ type: ALERT.EXISTING_DIFFERS.id, level: ALERT.EXISTING_DIFFERS.level, label: ALERT.EXISTING_DIFFERS.label });
+  }
+
+  // Método
+  if(cand.method === 'reordered'){
+    issues.push({ type: ALERT.REORDERED.id, level: ALERT.REORDERED.level, label: ALERT.REORDERED.label });
+  }else if(cand.method === 'typo'){
+    issues.push({ type: ALERT.TYPO.id, level: ALERT.TYPO.level, label: ALERT.TYPO.label });
+  }else if(cand.method === 'fuzzy'){
+    if(cand.score < settings.minScore && !cand.curpVerified){
+      issues.push({ type: ALERT.LOW_SCORE.id, level: ALERT.LOW_SCORE.level,
+                    label: ALERT.LOW_SCORE.label + ' (' + (cand.score * 100).toFixed(1) + '%)' });
+    }else{
+      issues.push({ type: ALERT.FUZZY.id, level: ALERT.FUZZY.level, label: ALERT.FUZZY.label });
+    }
+  }
+
+  return issues;
+}
+
+function hasGrave(proposal){
+  return proposal.issues.some(i =>
+    i.type === ALERT.CONFLICT.id ||
+    i.type === ALERT.INVALID_CURP.id ||
+    i.type === ALERT.NAME_MISMATCH.id
+  );
+}
+
+/* =====================================================================
+   13. PROCESO PRINCIPAL
+   ===================================================================== */
+async function runProcess(){
+  const general = state.files.find(f => f.id === state.generalId);
+  if(!general){ toast('Selecciona un archivo GENERAL antes de procesar.', 'error'); return; }
+  if(general.nameMode === 'single' && general.nameCol === null){
+    toast('Configura la columna NOMBRE del archivo general.', 'error'); return;
+  }
+  if(general.nameMode === 'split' && (general.patCol === null || general.nomCol === null)){
+    toast('Configura apellidos y nombres del archivo general.', 'error'); return;
+  }
+  if(general.curpCol === null){ toast('Configura la columna CURP (destino).', 'error'); return; }
+
+  const sources = state.files.filter(f => f.id !== general.id);
+  if(!sources.length){ toast('Agrega al menos un archivo FUENTE.', 'error'); return; }
+
+  for(const s of sources){
+    if(s.nameMode === 'single' && s.nameCol === null){
+      toast('Configura la columna NOMBRE en: ' + s.fileName, 'error'); return;
+    }
+    if(s.nameMode === 'split' && (s.patCol === null || s.nomCol === null)){
+      toast('Configura apellidos y nombres en: ' + s.fileName, 'error'); return;
+    }
+    if(s.curpCol === null){ toast('Configura la columna CURP en: ' + s.fileName, 'error'); return; }
+  }
+
+  setBusy(true, 'Analizando archivos…', 'Extrayendo registros');
+  await sleep(30);
+
+  const targetRecords = extractRecords(general);
+  let sourceRecords = [];
+  for(const s of sources) sourceRecords = sourceRecords.concat(extractRecords(s));
+
+  sourceRecords = sourceRecords.filter(r => r.normName && r.curp && r.curp.length >= 10);
+
+  if(settings.discardInvalid){
+    sourceRecords = sourceRecords.filter(r => isValidCurp(r.curp));
+  }
+
+  if(!sourceRecords.length){
+    setBusy(false);
+    toast('No hay CURP utilizables en las fuentes.', 'error', 6000);
+    return;
+  }
+
+  const index = buildIndex(sourceRecords);
+  setBusy(true, 'Buscando coincidencias…', '0 / ' + targetRecords.length);
+  await sleep(30);
+
+  const proposals = [];
+  let processed = 0;
+
+  for(const t of targetRecords){
+    processed++;
+    if(processed % 120 === 0){
+      $('#overlaySub').textContent = processed + ' / ' + targetRecords.length;
+      await sleep(0);
+    }
+    if(!t.normName) continue;
+
+    const existingCurp = t.curp;
+    const locked = !!(existingCurp && !settings.overwrite);
+
+    const candidates = locked ? [] : findCandidates(t, index, 5);
+
+    const p = {
+      id: uid(), target: t, existingCurp, candidates,
+      chosen: 0, status: 'pending', locked, issues: []
+    };
+
+    if(locked){
+      p.status = 'locked';
+    }else if(!candidates.length){
+      p.status = 'nomatch';
+    }else if(settings.autoAccept && candidates[0].score >= settings.autoAcceptScore && !hasGrave(p)){
+      p.issues = computeIssues(p);
+      if(!hasGrave(p)) p.status = 'accepted';
+    }
+
+    p.issues = computeIssues(p);
+    proposals.push(p);
+  }
+
+  state.proposals = proposals;
+  state.processed = true;
+  state.page = 1;
+  state.filter = 'all';
+  state.search = '';
+  state.sourceFilter = '';
+  state.expanded.clear();
+
+  $('#searchBox').value = '';
+  $('#filterSelect').value = 'all';
+  $('#sourceSelect').value = '';
+
+  // Poblar select de fuentes
+  const srcFiles = Array.from(new Set(proposals.filter(p => p.candidates.length).map(p => p.candidates[0].rec.fileName)));
+  const srcSel = $('#sourceSelect');
+  srcSel.innerHTML = '<option value="">Todas las fuentes</option>' +
+    srcFiles.map(f => '<option value="' + escapeHtml(f) + '">' + escapeHtml(f) + '</option>').join('');
+
+  setBusy(false);
+  $('#reportCard').hidden = false;
+  renderReport();
+
+  const matched = proposals.filter(p => p.candidates.length).length;
+  toast('Proceso completado: ' + matched + ' coincidencias de ' + proposals.length + ' registros.', 'success', 6000);
+  $('#reportCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* =====================================================================
+   14. ESTADÍSTICAS
+   ===================================================================== */
+function computeStats(){
+  const s = { total:0, accepted:0, rejected:0, pending:0, nomatch:0, locked:0, issues:0, verified:0 };
+  for(const p of state.proposals){
+    if(p.status === 'accepted') s.accepted++;
+    else if(p.status === 'rejected') s.rejected++;
+    else if(p.status === 'nomatch') s.nomatch++;
+    else if(p.status === 'locked') s.locked++;
+    else s.pending++;
+
+    if(p.issues.length) s.issues++;
+    if(p.candidates[p.chosen] && p.candidates[p.chosen].curpVerified) s.verified++;
+    s.total++;
+  }
+  return s;
+}
+
+function renderStats(){
+  const s = computeStats();
+  $('#stats').innerHTML =
+    '<div class="stat info"><b>' + s.total + '</b><span>Registros</span></div>' +
+    '<div class="stat ok"><b>' + s.accepted + '</b><span>Aceptados</span></div>' +
+    '<div class="stat bad"><b>' + s.rejected + '</b><span>Rechazados</span></div>' +
+    '<div class="stat"><b>' + s.pending + '</b><span>Pendientes</span></div>' +
+    '<div class="stat warn"><b>' + s.issues + '</b><span>Con alertas</span></div>' +
+    '<div class="stat ok"><b>' + s.verified + '</b><span>Verificadas</span></div>' +
+    '<div class="stat"><b>' + s.nomatch + '</b><span>Sin coincidencia</span></div>' +
+    '<div class="stat"><b>' + s.locked + '</b><span>Ya tenían CURP</span></div>';
+}
+
+/* =====================================================================
+   15. FILTRO Y ORDEN
+   ===================================================================== */
+function matchAlertFilter(p){
+  const f = state.filter;
+  if(f === 'all') return true;
+  if(f === 'pending' || f === 'accepted' || f === 'rejected' || f === 'nomatch' || f === 'locked'){
+    return p.status === f;
+  }
+  if(f.startsWith('alert:')){
+    const type = f.slice(6);
+    if(type === 'any') return p.issues.length > 0;
+    return p.issues.some(i => i.type === type);
+  }
+  return true;
+}
+
+function getFilteredProposals(){
+  let list = state.proposals.filter(p => {
+    if(!matchAlertFilter(p)) return false;
+
+    if(state.sourceFilter){
+      const cand = p.candidates[p.chosen];
+      if(!cand || cand.rec.fileName !== state.sourceFilter) return false;
+    }
+
+    if(state.search){
+      const q = normName(state.search);
+      const qRaw = state.search.toUpperCase().trim();
+      if(q && p.target.normName.indexOf(q) >= 0) return true;
+      if(qRaw && p.target.curpRaw.toUpperCase().indexOf(qRaw) >= 0) return true;
+      for(const c of p.candidates){
+        if(c.rec.curp.indexOf(qRaw) >= 0) return true;
+        if(c.rec.normName.indexOf(q) >= 0) return true;
+      }
+      return false;
+    }
+    return true;
+  });
+
+  // Ordenar
+  const dir = state.sortDir === 'asc' ? 1 : -1;
+  list.sort((a, b) => {
+    const ca = a.candidates[a.chosen], cb = b.candidates[b.chosen];
+    switch(state.sortBy){
+      case 'row': return (a.target.displayRow - b.target.displayRow) * dir;
+      case 'name': return a.target.normName.localeCompare(b.target.normName) * dir;
+      case 'score': {
+        const sa = ca ? ca.score : -1;
+        const sb = cb ? cb.score : -1;
+        return (sa - sb) * dir;
+      }
+      case 'alerts': {
+        const ga = hasGrave(a) ? 2 : (a.issues.length ? 1 : 0);
+        const gb = hasGrave(b) ? 2 : (b.issues.length ? 1 : 0);
+        return (ga - gb) * dir;
+      }
+    }
+    return 0;
+  });
+
+  return list;
+}
+
+/* =====================================================================
+   16. RENDER REPORTE
+   ===================================================================== */
+function scoreClass(score){
+  if(score >= 0.95) return 'score-hi';
+  if(score >= settings.minScore) return 'score-md';
+  return 'score-lo';
+}
+
+function methodLabel(m){
+  switch(m){
+    case 'exact': return 'Exacta';
+    case 'reordered': return 'Reordenada';
+    case 'typo': return 'Ortográfica';
+    case 'fuzzy': return 'Aproximada';
+    default: return '';
+  }
+}
+
+function buildRowHTML(p){
+  const cand = p.candidates[p.chosen];
+  const trClass = 'st-' + p.status;
+  const checked = p.status === 'accepted' ? ' checked' : '';
+  const disabled = (p.status === 'locked' || p.status === 'nomatch' || !p.candidates.length);
+  const isExpanded = state.expanded.has(p.id);
+
+  // CURP
+  let curpCell;
+  if(!p.candidates.length){
+    curpCell = '<span class="curp-empty">—</span>';
+  }else if(p.candidates.length === 1){
+    curpCell = '<span class="curp-mono">' + escapeHtml(cand.rec.curp) + '</span>';
+  }else{
+    let opts = '';
+    p.candidates.forEach((c, i) => {
+      opts += '<option value="' + i + '"' + (i === p.chosen ? ' selected' : '') + '>' +
+        escapeHtml(c.rec.curp) + ' · ' + (c.score * 100).toFixed(1) + '%' +
+        (c.curpVerified ? ' ✓' : '') + '</option>';
+    });
+    curpCell = '<select class="mini-select cand-select" data-pid="' + p.id + '">' + opts + '</select>';
+  }
+
+  // Score
+  let scoreCell = '<span class="curp-empty">—</span>';
+  if(cand){
+    scoreCell = '<span class="score-pill ' + scoreClass(cand.score) + '">' +
+      (cand.score * 100).toFixed(1) + '%</span>' +
+      '<span class="method-tag">' + methodLabel(cand.method) + '</span>';
+  }
+
+  // Nombre fuente
+  let srcNameCell = '<span class="curp-empty">—</span>';
+  if(cand){
+    srcNameCell = '<div class="name-src">' + escapeHtml(cand.rec.rawName) + '</div>';
+    if(cand.rec.parts){
+      srcNameCell += '<div class="src-cell" style="margin-top:2px">P: ' + escapeHtml(cand.rec.parts.paterno || '—') +
+        ' · M: ' + escapeHtml(cand.rec.parts.materno || '—') +
+        ' · N: ' + escapeHtml(cand.rec.parts.nombres || '—') + '</div>';
+    }
+  }
+
+  // Fuente archivo/fila
+  let srcCell = '<span class="curp-empty">—</span>';
+  if(cand){
+    srcCell = '<div class="src-cell">' +
+      '<span class="src-file">' + escapeHtml(cand.rec.fileName) + '</span>' +
+      'Fila ' + cand.rec.displayRow +
+      '</div>';
+  }
+
+  // Alertas
+  let tags = '';
+  if(p.issues.length){
+    tags = p.issues.map(i => '<span class="tag ' + i.level + '">' + escapeHtml(i.label) + '</span>').join('');
+  }else if(cand){
+    tags = '<span class="tag ok">OK</span>';
+  }else{
+    tags = '<span class="tag info">—</span>';
+  }
+
+  // Acciones
+  let actions = '';
+  if(p.status === 'locked' || p.status === 'nomatch'){
+    actions = '<span class="muted" style="font-size:11.5px">Sin acciones</span>';
+  }else{
+    actions =
+      '<button class="btn sm success" data-act="accept" data-pid="' + p.id + '">Aceptar</button>' +
+      '<button class="btn sm danger" data-act="reject" data-pid="' + p.id + '">Rechazar</button>' +
+      '<button class="btn sm ghost" data-act="toggle" data-pid="' + p.id + '">' +
+        (isExpanded ? '▲' : '▼') + '</button>';
+  }
+
+  const existing = p.existingCurp
+    ? '<div class="src-cell" style="margin-top:3px">Actual: <span class="curp-mono">' + escapeHtml(p.existingCurp) + '</span></div>'
+    : '';
+
+  let html = '<tr class="' + trClass + '" data-pid="' + p.id + '">' +
+      '<td><input type="checkbox" class="cb accept-cb" data-pid="' + p.id + '"' +
+        (disabled ? ' disabled' : '') + checked + '></td>' +
+      '<td><b>' + p.target.displayRow + '</b></td>' +
+      '<td class="name-cell">' + escapeHtml(p.target.rawName) + existing + '</td>' +
+      '<td>' + srcNameCell + '</td>' +
+      '<td>' + curpCell + '</td>' +
+      '<td>' + scoreCell + '</td>' +
+      '<td>' + srcCell + '</td>' +
+      '<td><div class="tags">' + tags + '</div></td>' +
+      '<td><div class="row-actions">' + actions + '</div></td>' +
+    '</tr>';
+
+  if(isExpanded) html += buildDetailRow(p);
+
+  return html;
+}
+
+function buildDetailRow(p){
+  const cand = p.candidates[p.chosen];
+  const allCands = p.candidates.map((c, i) => {
+    const isBest = i === p.chosen;
+    const verified = c.curpVerified ? ' · <span class="tag ok">✓ Verificada</span>' : '';
+    return '<div class="detail-cand' + (isBest ? ' is-best' : '') + '">' +
+      '<b>#' + (i + 1) + '</b> ' +
+      '<span class="curp-mono">' + escapeHtml(c.rec.curp) + '</span>' +
+      ' · ' + (c.score * 100).toFixed(1) + '% (' + methodLabel(c.method) + ')' + verified +
+      '<div class="src-cell">' + escapeHtml(c.rec.fileName) + ' · fila ' + c.rec.displayRow + ' · ' + escapeHtml(c.rec.rawName) + '</div>' +
+      (c.curpMatch ? '<div class="src-cell">CURP esperada: <b>' + escapeHtml(c.curpMatch.expected) + '</b> · coincidencia ' + c.curpMatch.matched.toFixed(1) + '/4</div>' : '') +
+    '</div>';
+  }).join('');
+
+  return '<tr class="detail-row" data-detail="' + p.id + '"><td colspan="9"><div class="detail-box">' +
+    '<div class="detail-block"><h4>Registro destino</h4>' +
+      '<div class="detail-kv"><b>Fila:</b> ' + p.target.displayRow + '</div>' +
+      '<div class="detail-kv"><b>Nombre:</b> ' + escapeHtml(p.target.rawName) + '</div>' +
+      '<div class="detail-kv"><b>CURP actual:</b> ' + (p.existingCurp ? escapeHtml(p.existingCurp) : '<i>vacía</i>') + '</div>' +
+    '</div>' +
+    '<div class="detail-block"><h4>Candidatos (' + p.candidates.length + ')</h4>' + (allCands || '<i>Sin candidatos</i>') + '</div>' +
+  '</div></td></tr>';
+}
+
+function renderReport(){
+  renderStats();
+
+  const list = getFilteredProposals();
+  const totalPages = Math.max(1, Math.ceil(list.length / state.pageSize));
+  if(state.page > totalPages) state.page = totalPages;
+  if(state.page < 1) state.page = 1;
+
+  const startIdx = (state.page - 1) * state.pageSize;
+  const pageItems = list.slice(startIdx, startIdx + state.pageSize);
+
+  const body = $('#reportBody');
+  if(!pageItems.length){
+    body.innerHTML = '<tr><td colspan="9"><div class="empty-state">No hay registros que coincidan con el filtro.</div></td></tr>';
+  }else{
+    body.innerHTML = pageItems.map(buildRowHTML).join('');
+  }
+
+  // Orden visual de headers
+  $$('table.report thead th.sortable').forEach(th => {
+    th.classList.toggle('sorted', th.dataset.sort === state.sortBy);
+    const ind = th.querySelector('.sort-ind');
+    if(ind){
+      if(th.dataset.sort === state.sortBy){
+        ind.textContent = state.sortDir === 'asc' ? '↑' : '↓';
+      }else{
+        ind.textContent = '↕';
+      }
+    }
+  });
+
+  $('#pageInfo').textContent =
+    'Mostrando ' + (list.length ? (startIdx + 1) : 0) + '–' +
+    Math.min(startIdx + state.pageSize, list.length) + ' de ' + list.length + ' registros' +
+    ' (total: ' + state.proposals.length + ')';
+
+  const btns = [];
+  btns.push('<button class="btn sm ghost" data-page="prev"' + (state.page <= 1 ? ' disabled' : '') + '>‹ Anterior</button>');
+  const win = 2;
+  let from = Math.max(1, state.page - win);
+  let to = Math.min(totalPages, state.page + win);
+  if(from > 1){
+    btns.push('<button class="btn sm ghost" data-page="1">1</button>');
+    if(from > 2) btns.push('<span class="muted" style="padding:0 4px">…</span>');
+  }
+  for(let i = from; i <= to; i++){
+    btns.push('<button class="btn sm ' + (i === state.page ? 'primary' : 'ghost') + '" data-page="' + i + '">' + i + '</button>');
+  }
+  if(to < totalPages){
+    if(to < totalPages - 1) btns.push('<span class="muted" style="padding:0 4px">…</span>');
+    btns.push('<button class="btn sm ghost" data-page="' + totalPages + '">' + totalPages + '</button>');
+  }
+  btns.push('<button class="btn sm ghost" data-page="next"' + (state.page >= totalPages ? ' disabled' : '') + '>Siguiente ›</button>');
+  $('#pageBtns').innerHTML = btns.join('');
+}
+
+function replaceRow(p){
+  const tr = $('#reportBody tr[data-pid="' + p.id + '"]:not(.detail-row)');
+  if(!tr) return;
+  const tmp = document.createElement('tbody');
+  tmp.innerHTML = buildRowHTML(p);
+  const newTr = tmp.firstElementChild;
+  tr.replaceWith(newTr);
+
+  // Eliminar detalle si existía
+  const oldDetail = $('#reportBody tr[data-detail="' + p.id + '"]');
+  if(oldDetail) oldDetail.remove();
+  // Reinsertar si corresponde
+  if(state.expanded.has(p.id)){
+    const det = document.createElement('tbody');
+    det.innerHTML = buildDetailRow(p);
+    newTr.after(det.firstElementChild);
+  }
+}
+
+/* =====================================================================
+   17. ACCIONES
+   ===================================================================== */
+function setStatus(pid, status){
+  const p = state.proposals.find(x => x.id === pid);
+  if(!p) return;
+  if(p.status === 'locked' || p.status === 'nomatch') return;
+  p.status = status;
+  p.issues = computeIssues(p);
+  replaceRow(p);
+  renderStats();
+}
+
+function bindReportEvents(){
+  const body = $('#reportBody');
+
+  body.addEventListener('change', function(e){
+    if(e.target.matches('.accept-cb')){
+      const pid = e.target.dataset.pid;
+      setStatus(pid, e.target.checked ? 'accepted' : 'pending');
+      return;
+    }
+    if(e.target.matches('.cand-select')){
+      const pid = e.target.dataset.pid;
+      const p = state.proposals.find(x => x.id === pid);
+      if(!p) return;
+      p.chosen = Number(e.target.value);
+      p.issues = computeIssues(p);
+      replaceRow(p);
+      renderStats();
+      return;
+    }
+  });
+
+  body.addEventListener('click', function(e){
+    const btn = e.target.closest('[data-act]');
+    if(!btn) return;
+    const pid = btn.dataset.pid;
+    if(btn.dataset.act === 'accept') setStatus(pid, 'accepted');
+    if(btn.dataset.act === 'reject') setStatus(pid, 'rejected');
+    if(btn.dataset.act === 'toggle'){
+      const p = state.proposals.find(x => x.id === pid);
+      if(!p) return;
+      if(state.expanded.has(pid)) state.expanded.delete(pid);
+      else state.expanded.add(pid);
+      replaceRow(p);
+    }
+  });
+
+  // Paginación
+  $('#pageBtns').addEventListener('click', function(e){
+    const btn = e.target.closest('[data-page]');
+    if(!btn || btn.disabled) return;
+    const v = btn.dataset.page;
+    const totalPages = Math.max(1, Math.ceil(getFilteredProposals().length / state.pageSize));
+    if(v === 'prev') state.page = Math.max(1, state.page - 1);
+    else if(v === 'next') state.page = Math.min(totalPages, state.page + 1);
+    else state.page = Number(v);
+    renderReport();
+  });
+
+  // Búsqueda
+  $('#searchBox').addEventListener('input', debounce(function(e){
+    state.search = e.target.value;
+    state.page = 1;
+    renderReport();
+  }, 260));
+
+  $('#filterSelect').addEventListener('change', function(e){
+    state.filter = e.target.value;
+    state.page = 1;
+    renderReport();
+  });
+
+  $('#sourceSelect').addEventListener('change', function(e){
+    state.sourceFilter = e.target.value;
+    state.page = 1;
+    renderReport();
+  });
+
+  $('#pageSizeSelect').addEventListener('change', function(e){
+    state.pageSize = Number(e.target.value);
+    state.page = 1;
+    renderReport();
+  });
+
+  // Orden por columna
+  $$('table.report thead th.sortable').forEach(th => {
+    th.addEventListener('click', function(){
+      const key = this.dataset.sort;
+      if(state.sortBy === key){
+        state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+      }else{
+        state.sortBy = key;
+        state.sortDir = 'asc';
+      }
+      renderReport();
+    });
+  });
+
+  // Select all
+  $('#selectAllCb').addEventListener('change', function(e){
+    const list = getFilteredProposals();
+    const startIdx = (state.page - 1) * state.pageSize;
+    const pageItems = list.slice(startIdx, startIdx + state.pageSize);
+    for(const p of pageItems){
+      if(p.status === 'locked' || p.status === 'nomatch' || !p.candidates.length) continue;
+      p.status = e.target.checked ? 'accepted' : 'pending';
+      p.issues = computeIssues(p);
+    }
+    renderReport();
+  });
+
+  // Bulk actions
+  $('#acceptAllBtn').addEventListener('click', function(){
+    for(const p of state.proposals){
+      if(p.status === 'locked' || p.status === 'nomatch' || !p.candidates.length) continue;
+      p.status = 'accepted';
+      p.issues = computeIssues(p);
+    }
+    renderReport();
+    toast('Todas las propuestas aceptadas.', 'success');
+  });
+
+  $('#acceptHighBtn').addEventListener('click', function(){
+    let count = 0;
+    for(const p of state.proposals){
+      if(p.status === 'locked' || p.status === 'nomatch' || !p.candidates.length) continue;
+      const c = p.candidates[p.chosen];
+      if(c && c.score >= 0.95 && !hasGrave(p)){
+        p.status = 'accepted';
+        p.issues = computeIssues(p);
+        count++;
+      }
+    }
+    renderReport();
+    toast(count + ' de alta confianza aceptadas.', 'success');
+  });
+
+  $('#acceptVerifiedBtn').addEventListener('click', function(){
+    let count = 0;
+    for(const p of state.proposals){
+      if(p.status === 'locked' || p.status === 'nomatch' || !p.candidates.length) continue;
+      const c = p.candidates[p.chosen];
+      if(c && c.curpVerified && !hasGrave(p)){
+        p.status = 'accepted';
+        p.issues = computeIssues(p);
+        count++;
+      }
+    }
+    renderReport();
+    toast(count + ' con CURP verificada aceptadas.', 'success');
+  });
+
+  $('#acceptNoErrorsBtn').addEventListener('click', function(){
+    let count = 0;
+    for(const p of state.proposals){
+      if(p.status === 'locked' || p.status === 'nomatch' || !p.candidates.length) continue;
+      if(!hasGrave(p)){
+        p.status = 'accepted';
+        p.issues = computeIssues(p);
+        count++;
+      }
+    }
+    renderReport();
+    toast(count + ' sin alertas graves aceptadas.', 'success');
+  });
+
+  $('#rejectAllBtn').addEventListener('click', function(){
+    for(const p of state.proposals){
+      if(p.status === 'locked' || p.status === 'nomatch') continue;
+      p.status = 'rejected';
+      p.issues = computeIssues(p);
+    }
+    renderReport();
+    toast('Todas las propuestas rechazadas.', 'warn');
+  });
+
+  $('#clearBtn').addEventListener('click', function(){
+    for(const p of state.proposals){
+      if(p.status === 'locked') continue;
+      p.status = p.candidates.length ? 'pending' : 'nomatch';
+      p.issues = computeIssues(p);
+    }
+    renderReport();
+    toast('Decisiones limpiadas.', 'info');
+  });
+
+  $('#csvBtn').addEventListener('click', downloadReportCSV);
+  $('#applyBtn').addEventListener('click', applyAndDownload);
+}
+
+function debounce(fn, ms){
+  let t;
+  return function(){
+    const args = arguments, ctx = this;
+    clearTimeout(t);
+    t = setTimeout(() => fn.apply(ctx, args), ms);
+  };
+}
+
+/* =====================================================================
+   18. EXPORTAR CSV (solo filtrados)
+   ===================================================================== */
+function downloadReportCSV(){
+  const list = getFilteredProposals();
+  if(!list.length){ toast('No hay datos para exportar.', 'warn'); return; }
+
+  const rows = [[
+    'Fila','Nombre general','Nombre fuente','CURP existente','CURP propuesta',
+    'Similitud %','Método','Archivo fuente','Fila fuente','Estado','Alertas'
+  ]];
+
+  for(const p of list){
+    const c = p.candidates[p.chosen];
+    rows.push([
+      p.target.displayRow, p.target.rawName,
+      c ? c.rec.rawName : '',
+      p.existingCurp,
+      c ? c.rec.curp : '',
+      c ? (c.score * 100).toFixed(1) : '',
+      c ? methodLabel(c.method) : '',
+      c ? c.rec.fileName : '',
+      c ? c.rec.displayRow : '',
+      p.status,
+      p.issues.map(i => i.label).join(' | ')
+    ]);
+  }
+
+  const csv = rows.map(r => r.map(v => '"' + String(v === undefined || v === null ? '' : v).replace(/"/g,'""') + '"').join(',')).join('\r\n');
+  const blob = new Blob(['\uFEFF' + csv], { type:'text/csv;charset=utf-8;' });
+  const gen = state.files.find(f => f.id === state.generalId);
+  const baseName = gen ? gen.fileName.replace(/\.(xlsx|xls|xlsm|csv)$/i,'') : 'reporte';
+
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = baseName + '_REPORTE_CONSOLIDACION.csv';
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+  toast('Reporte CSV descargado.', 'success');
+}
+
+/* =====================================================================
+   19. APLICAR Y DESCARGAR
+   ===================================================================== */
+function applyAndDownload(){
+  const general = state.files.find(f => f.id === state.generalId);
+  if(!general){ toast('No hay archivo general.', 'error'); return; }
+
+  const accepted = state.proposals.filter(p => p.status === 'accepted' && p.candidates[p.chosen]);
+  if(!accepted.length){ toast('No hay propuestas aceptadas para aplicar.', 'warn'); return; }
+
+  if(!confirm('Se aplicarán ' + accepted.length + ' CURP al archivo general.\n¿Continuar?')) return;
+
+  try{
+    const ws = general.wb.Sheets[general.sheetName];
+    if(!ws) throw new Error('Hoja destino no disponible.');
+
+    const colAbs = general.colOffset + general.curpCol;
+    let applied = 0;
+    let maxRow = 0;
+
+    for(const p of accepted){
+      const cand = p.candidates[p.chosen];
+      if(!cand || !cand.rec.curp) continue;
+      const rowAbs = general.rowOffset + p.target.rowIndex;
+      if(rowAbs > maxRow) maxRow = rowAbs;
+      const addr = XLSX.utils.encode_cell({ r: rowAbs, c: colAbs });
+      let cell = ws[addr];
+      if(cell){
+        cell.t = 's'; cell.v = cand.rec.curp;
+        delete cell.w; delete cell.f; delete cell.r; delete cell.h;
+      }else{
+        ws[addr] = { t:'s', v: cand.rec.curp };
+      }
+      applied++;
+    }
+
+    if(ws['!ref']){
+      const range = XLSX.utils.decode_range(ws['!ref']);
+      if(colAbs > range.e.c) range.e.c = colAbs;
+      if(maxRow > range.e.r) range.e.r = maxRow;
+      ws['!ref'] = XLSX.utils.encode_range(range);
+    }
+
+    const outName = general.fileName.replace(/\.(xlsx|xlsm|xls)$/i,'') + '_CONSOLIDADO.xlsx';
+    XLSX.writeFile(general.wb, outName, { compression: true, bookSST: false });
+
+    toast('¡Listo! ' + applied + ' CURP aplicadas. Archivo: ' + outName, 'success', 8000);
+    for(const p of accepted) p.applied = true;
+  }catch(err){
+    console.error(err);
+    toast('Error al generar: ' + err.message, 'error', 8000);
+  }
+}
+
+/* =====================================================================
+   20. REINICIO / TEMA / SETTINGS
+   ===================================================================== */
+function resetAll(){
+  if(state.files.length && !confirm('Se perderán todos los archivos y resultados. ¿Continuar?')) return;
+  state.files = []; state.generalId = null; state.proposals = [];
+  state.processed = false; state.page = 1; state.filter = 'all';
+  state.search = ''; state.sourceFilter = ''; state.expanded.clear();
+  $('#reportCard').hidden = true;
+  $('#reportBody').innerHTML = '';
+  $('#searchBox').value = '';
+  $('#filterSelect').value = 'all';
+  $('#sourceSelect').innerHTML = '<option value="">Todas las fuentes</option>';
+  $('#fileInput').value = '';
+  renderFiles();
+  toast('Todo reiniciado.', 'info');
+}
+
+function initTheme(){
+  const saved = localStorage.getItem('consolidaciones-theme');
+  if(saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+  $('#themeBtn').addEventListener('click', function(){
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    if(isDark){
+      document.documentElement.removeAttribute('data-theme');
+      localStorage.setItem('consolidaciones-theme', 'light');
+      this.textContent = '🌙 Tema';
+    }else{
+      document.documentElement.setAttribute('data-theme', 'dark');
+      localStorage.setItem('consolidaciones-theme', 'dark');
+      this.textContent = '☀️ Tema';
+    }
+  });
+  if(document.documentElement.getAttribute('data-theme') === 'dark'){
+    $('#themeBtn').textContent = '☀️ Tema';
+  }
+}
+
+function bindSettings(){
+  const ms = $('#minScore'), msv = $('#minScoreVal');
+  ms.addEventListener('input', function(){
+    settings.minScore = Number(this.value) / 100;
+    msv.textContent = this.value + '%';
+  });
+
+  const aa = $('#autoAccept'), aas = $('#autoAcceptScore'), aasv = $('#autoAcceptVal');
+  aa.addEventListener('change', function(){
+    settings.autoAccept = this.checked;
+    aas.disabled = !this.checked;
+  });
+  aas.addEventListener('input', function(){
+    settings.autoAcceptScore = Number(this.value) / 100;
+    aasv.textContent = this.value + '%';
+  });
+
+  $('#verifyCurp').addEventListener('change', function(){
+    settings.verifyCurp = this.checked;
+  });
+
+  $('#overwrite').addEventListener('change', function(){
+    settings.overwrite = this.checked;
+  });
+
+  $('#discardInvalid').addEventListener('change', function(){
+    settings.discardInvalid = this.checked;
+  });
+}
+
+function bindDropzone(){
+  const dz = $('#dropzone'), input = $('#fileInput');
+  $('#pickBtn').addEventListener('click', function(e){ e.stopPropagation(); input.click(); });
+  dz.addEventListener('click', function(e){
+    if(e.target === dz || e.target.classList.contains('dz-icon') || e.target.tagName === 'P') input.click();
+  });
+  input.addEventListener('change', function(){
+    if(this.files && this.files.length) addFiles(this.files);
+    this.value = '';
+  });
+  ['dragenter','dragover'].forEach(evt => dz.addEventListener(evt, function(e){
+    e.preventDefault(); e.stopPropagation(); dz.classList.add('drag');
+  }));
+  ['dragleave','drop'].forEach(evt => dz.addEventListener(evt, function(e){
+    e.preventDefault(); e.stopPropagation();
+    if(evt === 'dragleave' && dz.contains(e.relatedTarget)) return;
+    dz.classList.remove('drag');
+  }));
+  dz.addEventListener('drop', function(e){
+    const dt = e.dataTransfer;
+    if(dt && dt.files && dt.files.length) addFiles(dt.files);
+  });
+  window.addEventListener('dragover', e => e.preventDefault());
+  window.addEventListener('drop', e => e.preventDefault());
+}
+
+/* =====================================================================
+   21. INIT
+   ===================================================================== */
+function init(){
+  if(typeof XLSX === 'undefined'){
+    document.body.insertAdjacentHTML('afterbegin',
+      '<div class="alert error" style="margin:20px;border-radius:12px">' +
+      '<span>⚠️</span><div>No se pudo cargar <b>SheetJS (XLSX)</b>. Verifica tu conexión.</div></div>');
+    return;
+  }
+  initTheme();
+  bindDropzone();
+  bindFileListEvents();
+  bindSettings();
+  bindReportEvents();
+  $('#processBtn').addEventListener('click', runProcess);
+  $('#resetBtn').addEventListener('click', resetAll);
+  renderFiles();
+  console.info('%cConsolidaciones CURP · v2.0', 'color:#2563eb;font-weight:bold;font-size:14px');
+}
+
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', init);
+}else{ init(); }
+
+})();
+</script>
+</body>
+</html>

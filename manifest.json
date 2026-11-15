@@ -1,0 +1,90 @@
+{
+    "name": "Excel BD",
+    "short_name": "Excel BD",
+    "description": "Formato App para edicion, actualizacion de base de datos en excel.xls en forma de Aplicacion offline, configurable.",
+    "start_url": "/",
+    "display": "standalone",
+    "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+    "theme_color": "#0167ff",
+    "background_color": "#0a0e1a",
+    "orientation": "portrait-primary",
+    "scope": "/",
+    "lang": "es-MX",
+    "dir": "ltr",
+    "categories": ["travel", "navigation", "utilities"],
+    "id": "rutas-main",
+    "version": "2.0.0",
+    "gcm_sender_info": {
+    "sender_id": "837629411067"
+},
+    
+    "icons": [
+    {"src": "/img.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "/img.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "/img.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+],
+
+    "shortcuts": [
+    {
+        "name": "INEGI",
+        "short_name": "Mapa INEGI",
+        "description": "Busez",
+        "url": "/inegi",
+        "icons": [{"src": "/img.png", "sizes": "96x96", "type": "image/png"}]
+    },
+    {
+        "name": "🛒 Mar",
+        "short_name": "Market",
+        "description": "Ver anuncios clasificados",
+        "url": "/?tab=market",
+        "icons": [{"src": "/img.png", "sizes": "96x96", "type": "image/png"}]
+    },
+    {
+        "name": "🗺️ Busca",
+        "short_name": "Viaje",
+        "description": "Encontrar rutas cercanas en el mapa",
+        "url": "/?tab=trip",
+        "icons": [{"src": "/img.png", "sizes": "96x96", "type": "image/png"}]
+    }
+],
+
+  "screenshots": [
+    {"src": "/img.png", "sizes": "1280x720", "type": "image/png", "form_factor": "wide", "label": "RUTIA Chiapas - Buscador de rutas"},
+    {"src": "/img.png", "sizes": "1280x720", "type": "image/png", "form_factor": "wide", "label": "RUTIA Chiapas - Mapa de rutas"},
+    {"src": "/img.png", "sizes": "720x1280", "type": "image/png", "form_factor": "narrow", "label": "RUTIA Chiapas - Móvil"}
+],
+
+"launch_handler": {
+    "client_mode": "navigate-new"
+},
+    
+    "edge_side_panel": {
+    "preferred_width": 400
+},
+
+"handle_links": "preferred",
+    
+    "share_target": {
+        "action": "/",
+        "method": "GET",
+        "enctype": "application/x-www-form-urlencoded",
+        "params": {"title": "title", "text": "text", "url": "url"}
+    },
+    
+    "serviceworker": {"src": "/sw.js", "scope": "/", "type": "classic", "update_via_cache": "all"},
+    "offline_enabled": true,
+    "cache": {"strategy": "cache-first", "max_age": 2592000, "max_entries": 100},
+    "prefetch": {"urls": ["/", "/offline.html"], "strategy": "eager"},
+    
+    "splash_screen": {"background_color": "#0167ff", "image": "/img.png", "image_purpose": "any"},
+    
+    "analytics": {"enabled": false},
+"features": {
+    "cross_window": true,
+    "fullscreen": true,
+    "picture_in_picture": false,
+    "wake_lock": false,
+    "push_notifications": true
+},
+    "capture_links": "existing-client-event"
+}

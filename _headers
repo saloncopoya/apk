@@ -1,0 +1,26 @@
+/* 
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  Permissions-Policy: geolocation=(self), camera=(self), microphone=(), payment=(), usb=(), bluetooth=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://cdn.sheetjs.com https://static.cloudflareinsights.com; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: blob: https://res.cloudinary.com https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com https://server.arcgisonline.com https://cdn.jsdelivr.net https://gaia.inegi.org.mx https://gaiamapas1.inegi.org.mx https://gaiamapas2.inegi.org.mx; connect-src 'self' data: blob: https://api.cloudinary.com https://cdn.jsdelivr.net https://cdn.sheetjs.com https://static.cloudflareinsights.com https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com https://server.arcgisonline.com https://tessdata.projectnaptha.com https://nominatim.openstreetmap.org https://gaia.inegi.org.mx https://gaiamapas1.inegi.org.mx https://gaiamapas2.inegi.org.mx; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
+
+# ─── HTML de la app: noindex (solo la app, no la landing) ────────────
+/
+  X-Robots-Tag: noindex, nofollow
+  Cache-Control: public, max-age=0, must-revalidate
+
+/index.html
+  X-Robots-Tag: noindex, nofollow
+  Cache-Control: public, max-age=0, must-revalidate
+
+# ─── ubicacion.html: PERMITIR crawlers (para preview de WhatsApp) ────
+/ubicacion.html
+  Cache-Control: public, max-age=0, must-revalidate
+  # ← SIN X-Robots-Tag → los bots sociales pueden leerla
+
+# ─── og-image: cache largo (nunca cambia) ────────────────────────────
+/og-image.png
+  Cache-Control: public, max-age=31536000, immutable
+  Access-Control-Allow-Origin: *

@@ -1,0 +1,29 @@
+# ─────────────────────────────────────────────────────────────
+# Bots sociales: PERMITIDOS (para previews de WhatsApp, FB, etc.)
+# ─────────────────────────────────────────────────────────────
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: WhatsApp
+Allow: /
+
+User-agent: Twitterbot
+Allow: /
+
+User-agent: LinkedInBot
+Allow: /
+
+User-agent: TelegramBot
+Allow: /
+
+User-agent: Slackbot
+Allow: /
+
+User-agent: Discordbot
+Allow: /
+
+# ─────────────────────────────────────────────────────────────
+# Resto de bots: BLOQUEADOS (privacidad de la app)
+# ─────────────────────────────────────────────────────────────
+User-agent: *
+Disallow: /

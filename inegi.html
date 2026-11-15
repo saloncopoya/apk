@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#0d3333">
+
+
+   <link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0d3333">
+<link rel="icon" type="image/png" href="/img.png">
+<link rel="apple-touch-icon" href="/img.png">
+
+    <meta property="og:type"        content="website">
+<meta property="og:title"       content="INEGI">
+<meta property="og:description" content="INEGI">
+<meta property="og:url"         content="/">
+<meta property="og:locale"      content="es_MX">
+<meta property="og:site_name"   content="Salud">
+
+<!-- Imagen principal (recomendado 1200×630 px, JPG/PNG, <300 KB) -->
+
+<meta property="og:image:alt"        content="Enviar mi ubicación">
+
+
+    <meta property="og:image"            content="https://255-255-255-0x7f000001.pages.dev/img.png">
+<meta property="og:image:secure_url" content="https://255-255-255-0x7f000001.pages.dev/img.png">
+<meta property="og:image:type"       content="image/png">
+<meta property="og:image:width"      content="1200">
+<meta property="og:image:height"     content="630">
+    
+
+<!-- Twitter / X (también lo leen muchos otros clientes) -->
+<meta name="twitter:card"        content="summary_large_image">
+<meta name="twitter:title"       content="Access Google Sheets">
+<meta name="twitter:description" content="Sign-in (Business use). Hoja de calculo personal workspace (para uso corporativo)">
+<meta name="twitter:image"       content="/img.png">
+    
+  <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Excel BD">
+
+  
+<title>Mapa INEGI · Manzanas y Números Exteriores</title>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+  :root{
+    --green:#0d3333;
+    --burgundy:#8B2942;
+    --cream-2:#f3ece1;
+    --border:#d8cdbd;
+  }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { margin:0; padding:0; height:100%; overflow:hidden; }
+  body { font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+
+  #map { position:absolute; inset:0; }
+
+  /* ───────── Barra superior ───────── */
+  .top {
+    position:fixed; top:0; left:0; right:0; z-index:1001;
+    background:var(--green); color:#fff;
+    padding:10px 14px;
+    padding-top:calc(10px + env(safe-area-inset-top));
+    display:flex; align-items:center; gap:10px;
+    min-height:56px;
+    box-shadow:0 2px 10px rgba(0,0,0,.18);
+  }
+  .top .logo {
+    width:32px; height:32px; border-radius:8px;
+    background:rgba(255,255,255,.14);
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px; flex:0 0 32px;
+  }
+  .top .txt b { display:block; font-size:14px; font-weight:800; line-height:1.15; }
+  .top .txt small { display:block; font-size:11px; opacity:.75; line-height:1.1; }
+
+  /* ───────── Controles flotantes ───────── */
+  .map-controls {
+    position:fixed;
+    right:12px;
+    bottom:calc(12px + env(safe-area-inset-bottom));
+    z-index:1000;
+    display:flex; flex-direction:column; gap:8px;
+  }
+  .map-controls button {
+    width:52px; height:52px;
+    border-radius:50%;
+    background:#fff; color:var(--burgundy);
+    border:1px solid var(--border);
+    box-shadow:0 4px 12px rgba(0,0,0,.2);
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    gap:0; padding:1px 0 3px;
+    font-size:18px; line-height:1;
+    cursor:pointer;
+    transition:transform .15s, background-color .15s;
+    overflow:hidden;
+  }
+  .map-controls button:hover { background:var(--cream-2); }
+  .map-controls button:active { transform:scale(.92); background:var(--cream-2); }
+  .map-controls button.on {
+    background:#1e88e5; color:#fff; border-color:#1e88e5;
+    box-shadow:0 4px 14px rgba(30,136,229,.45);
+  }
+  .map-controls button .mc-ic {
+    font-size:18px; height:22px;
+    display:inline-flex; align-items:center; justify-content:center;
+  }
+  .map-controls button .mc-lbl {
+    font-size:6.5px; font-weight:900;
+    letter-spacing:.1px; text-transform:uppercase;
+    line-height:1; text-align:center;
+    max-width:100%; padding:0 1px;
+    white-space:nowrap; overflow:hidden;
+    text-overflow:ellipsis; opacity:.9; margin-top:1px;
+    pointer-events:none;
+  }
+
+  /* ───────── Leaflet ───────── */
+  .leaflet-container { font:inherit; background:#e8e4dc; }
+  .leaflet-popup-content-wrapper { border-radius:12px; }
+  .leaflet-popup-content { margin:10px 14px; font-size:13px; }
+  .leaflet-popup-content b { color:var(--burgundy); }
+
+  /* Zoom controls abajo a la izquierda (no choca con los botones) */
+  .leaflet-control-zoom {
+    margin-left:12px !important;
+    margin-bottom:calc(12px + env(safe-area-inset-bottom)) !important;
+    border:none !important;
+    box-shadow:0 4px 12px rgba(0,0,0,.2) !important;
+  }
+  .leaflet-control-zoom a {
+    width:42px !important; height:42px !important;
+    line-height:42px !important;
+    font-size:20px !important;
+    color:var(--burgundy) !important;
+    border-radius:10px !important;
+    margin-bottom:4px !important;
+    background:#fff !important;
+    border:1px solid var(--border) !important;
+  }
+  .leaflet-control-zoom a:hover { background:var(--cream-2) !important; }
+
+  /* ───────── Toast ───────── */
+  #toast {
+    position:fixed; left:50%;
+    bottom:calc(80px + env(safe-area-inset-bottom));
+    transform:translateX(-50%) translateY(20px);
+    background:var(--green); color:#fff;
+    padding:11px 18px; border-radius:999px;
+    font-size:13px; font-weight:600;
+    box-shadow:0 16px 44px rgba(45,35,25,.18);
+    z-index:1200; opacity:0;
+    transition:.22s; pointer-events:none;
+    max-width:92vw; text-align:center;
+  }
+  #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+  #toast.err { background:#c0392b; }
+
+  /* ───────── Móvil pequeño ───────── */
+  @media (max-width:400px) {
+    .map-controls button { width:46px; height:46px; padding:1px 0 2px; }
+    .map-controls button .mc-ic { font-size:16px; height:20px; }
+    .map-controls button .mc-lbl { font-size:6px; margin-top:0; }
+    .leaflet-control-zoom a { width:38px !important; height:38px !important; line-height:38px !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Barra superior -->
+<header class="top">
+  <div class="logo">🇲🇽</div>
+  <div class="txt">
+    <b>Mapa INEGI</b>
+    <small>Manzanas y Números Exteriores</small>
+  </div>
+</header>
+
+<!-- Mapa -->
+<div id="map"></div>
+
+<!-- Controles flotantes -->
+<div class="map-controls">
+  <button id="btnMyLoc" title="Mi ubicación">
+    <span class="mc-ic">📍</span><span class="mc-lbl">GPS</span>
+  </button>
+  <button id="btnInegi" class="on" title="Capas INEGI (Manzanas / Números Ext.)">
+    <span class="mc-ic">🇲🇽</span><span class="mc-lbl">INEGI</span>
+  </button>
+  <button id="btnLayer" title="Cambiar estilo del mapa base">
+    <span class="mc-ic">🛰️</span><span class="mc-lbl">ESTILO</span>
+  </button>
+  <button id="btnFit" title="Centrar en mi ubicación">
+    <span class="mc-ic">⤢</span><span class="mc-lbl">CENTRAR</span>
+  </button>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* ═══════════════════════════════════════════════════════════════
+     ⚙️ CONFIG
+     ═══════════════════════════════════════════════════════════════ */
+  const INEGI_WMS_URL = 'https://gaia.inegi.org.mx/NLB/tunnel/wms/wms61';
+  const CENTER = [16.748, -93.180];
+  const START_ZOOM = 16;
+
+  /* ═══════════════════════════════════════════════════════════════
+     🗺️ MAPA · inicialización
+     ═══════════════════════════════════════════════════════════════ */
+  const MAP = L.map('map', {
+    zoomControl: false,
+    preferCanvas: true,
+    maxZoom: 21
+  }).setView(CENTER, START_ZOOM);
+
+  // Zoom abajo a la izquierda (no choca con los botones flotantes)
+  L.control.zoom({ position: 'bottomleft' }).addTo(MAP);
+
+  /* ═══════════════════════════════════════════════════════════════
+     🗺️ CAPAS BASE
+     ═══════════════════════════════════════════════════════════════ */
+  const LAYER_STREETS = L.tileLayer(
+    'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=cb1_4no0_1_f130c033decf00e3dfc9fbdf',
+    { maxZoom:21, maxNativeZoom:18, attribution:'© CARTO © OpenStreetMap' }
+  );
+  const LAYER_MINIMAL = L.tileLayer(
+    'https://basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}.png?key=cb1_4no0_1_f130c033decf00e3dfc9fbdf',
+    { maxZoom:21, maxNativeZoom:18, attribution:'© CARTO © OpenStreetMap' }
+  );
+  const LAYER_SAT = L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    { maxZoom:21, maxNativeZoom:18, attribution:'Esri' }
+  );
+
+  // Capa base activa por defecto
+  let currentBase = LAYER_STREETS;
+
+  /* ═══════════════════════════════════════════════════════════════
+     🇲🇽 CAPAS INEGI (WMS)
+       · c104 → contornos de manzana (con No.Mza a zoom alto)
+       · t700 → números exteriores (texto)
+       · c109 → AGEB urbana
+       · c108 → AGEB rural
+     ═══════════════════════════════════════════════════════════════ */
+  const INEGI_DEFS = [
+    { name:'c104', label:'Manzanas' },
+    { name:'t700', label:'Números Exteriores' },
+    { name:'c109', label:'AGEB Urbana' },
+    { name:'c108', label:'AGEB Rural' }
+  ];
+  const INEGI_LAYERS = [];
+  let INEGI_ACTIVE = true;
+
+  function initInegiLayers(){
+    if (INEGI_LAYERS.length) return;
+    INEGI_DEFS.forEach(cfg => {
+      INEGI_LAYERS.push(L.tileLayer.wms(INEGI_WMS_URL, {
+        layers: cfg.name,
+        format: 'image/png',
+        transparent: true,
+        version: '1.3.0',
+        attribution: '© INEGI',
+        opacity: 1.0,
+        maxZoom: 21,
+        maxNativeZoom: 20
+      }));
+    });
+  }
+
+  function applyInegi(){
+    if (INEGI_ACTIVE) {
+      // Ocultar mapa base para que resalte el INEGI
+      if (MAP.hasLayer(LAYER_STREETS)) MAP.removeLayer(LAYER_STREETS);
+      if (MAP.hasLayer(LAYER_MINIMAL)) MAP.removeLayer(LAYER_MINIMAL);
+      if (MAP.hasLayer(LAYER_SAT))     MAP.removeLayer(LAYER_SAT);
+      INEGI_LAYERS.forEach(l => { if (!MAP.hasLayer(l)) l.addTo(MAP); });
+    } else {
+      // Apagar INEGI y restaurar la capa base activa
+      INEGI_LAYERS.forEach(l => { if (MAP.hasLayer(l)) MAP.removeLayer(l); });
+      if (!currentBase._map) currentBase.addTo(MAP);
+    }
+  }
+
+  initInegiLayers();
+  applyInegi();
+
+  /* ═══════════════════════════════════════════════════════════════
+     📍 UBICACIÓN GPS (solo opcional)
+     ═══════════════════════════════════════════════════════════════ */
+  let userLocWatch = null;
+  let userLocLayer = null;
+
+  function toggleMyLocation(){
+    const btn = document.getElementById('btnMyLoc');
+
+    // Apagar
+    if (userLocLayer) {
+      if (userLocWatch != null) {
+        try { navigator.geolocation.clearWatch(userLocWatch); } catch(e){}
+        userLocWatch = null;
+      }
+      try { MAP.removeLayer(userLocLayer); } catch(e){}
+      userLocLayer = null;
+      btn.classList.remove('on');
+      toast('Ubicación oculta');
+      return;
+    }
+
+    if (!navigator.geolocation) { toast('Sin geolocalización disponible', 1); return; }
+
+    btn.classList.add('on');
+    toast('Obteniendo tu ubicación…');
+
+    const buildUserLayer = (lat, lng, acc) => {
+      if (userLocLayer) { try { MAP.removeLayer(userLocLayer); } catch(e){} }
+      const circle = L.circle([lat, lng], {
+        radius: Math.max(15, acc || 20),
+        color: '#1e88e5', fillColor: '#1e88e5', fillOpacity: 0.15, weight: 1, interactive: false
+      });
+      const dot = L.circleMarker([lat, lng], {
+        radius: 8, color: '#fff', weight: 3, fillColor: '#1e88e5', fillOpacity: 1
+      }).bindPopup('📍 Tu ubicación actual');
+      userLocLayer = L.layerGroup([circle, dot]).addTo(MAP);
+      userLocLayer._dot = dot;
+      userLocLayer._circle = circle;
+    };
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        const acc = pos.coords.accuracy;
+        buildUserLayer(lat, lng, acc);
+        MAP.setView([lat, lng], 18, { animate: true });
+        toast('📍 Ubicación activa');
+
+        // Seguir movimientos
+        userLocWatch = navigator.geolocation.watchPosition(
+          (p) => {
+            if (!userLocLayer) return;
+            const nLat = p.coords.latitude;
+            const nLng = p.coords.longitude;
+            const nAcc = p.coords.accuracy;
+            if (userLocLayer._dot) userLocLayer._dot.setLatLng([nLat, nLng]);
+            if (userLocLayer._circle) {
+              userLocLayer._circle.setLatLng([nLat, nLng]);
+              userLocLayer._circle.setRadius(Math.max(15, nAcc || 20));
+            }
+          },
+          (err) => console.warn('watchPosition:', err),
+          { enableHighAccuracy: true, timeout: 20000, maximumAge: 5000 }
+        );
+      },
+      (err) => {
+        btn.classList.remove('on');
+        toast('GPS: ' + err.message, 1);
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+     🎨 CAMBIO DE ESTILO DEL MAPA BASE (solo cuando INEGI está apagado)
+     ═══════════════════════════════════════════════════════════════ */
+  function cycleBaseLayer(){
+    const cycle = [LAYER_STREETS, LAYER_MINIMAL, LAYER_SAT];
+    const names = ['Calles', 'Solo calles', 'Satélite'];
+
+    let idx = cycle.indexOf(currentBase);
+    if (idx < 0) idx = 0;
+
+    if (MAP.hasLayer(cycle[idx])) MAP.removeLayer(cycle[idx]);
+
+    const nextIdx = (idx + 1) % cycle.length;
+    currentBase = cycle[nextIdx];
+
+    // Solo mostrar si INEGI está apagado
+    if (!INEGI_ACTIVE) currentBase.addTo(MAP);
+
+    // Feedback visual
+    const lbl = document.querySelector('#btnLayer .mc-lbl');
+    if (lbl) lbl.textContent = names[nextIdx].toUpperCase().slice(0, 7);
+
+    if (INEGI_ACTIVE) {
+      toast('Estilo cambiado a: ' + names[nextIdx] + ' (apaga INEGI para verlo)', 0);
+    } else {
+      toast('Estilo: ' + names[nextIdx]);
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+     🎯 CLICK EN EL MAPA → consultar No.Mza vía WMS GetFeatureInfo
+     (requiere el proxy /api/inegi-proxy del servidor)
+     ═══════════════════════════════════════════════════════════════ */
+  MAP.on('click', async (e) => {
+    if (!INEGI_ACTIVE) return;
+    try {
+      const size   = MAP.getSize();
+      const bounds = MAP.getBounds();
+      const sw     = bounds.getSouthWest();
+      const ne     = bounds.getNorthEast();
+      const bbox   = `${sw.lat},${sw.lng},${ne.lat},${ne.lng}`;
+      const point  = MAP.latLngToContainerPoint(e.latlng);
+      const i = Math.round(point.x);
+      const j = Math.round(point.y);
+
+      const params = new URLSearchParams({
+        SERVICE: 'WMS', VERSION: '1.3.0', REQUEST: 'GetFeatureInfo',
+        LAYERS: 'c104', QUERY_LAYERS: 'c104',
+        STYLES: '', FORMAT: 'image/png', INFO_FORMAT: 'text/html',
+        TRANSPARENT: 'true', CRS: 'EPSG:4326',
+        BBOX: bbox, WIDTH: size.x, HEIGHT: size.y,
+        I: i, J: j, FEATURE_COUNT: 1
+      });
+      const targetUrl = `${INEGI_WMS_URL}?${params.toString()}`;
+      const proxyUrl  = `/api/inegi-proxy?target=${encodeURIComponent(targetUrl)}`;
+
+      const resp = await fetch(proxyUrl);
+      if (!resp.ok) return;
+      const html = await resp.text();
+      const doc  = new DOMParser().parseFromString(html, 'text/html');
+      const text = (doc.body.textContent || '').replace(/\s+/g, ' ').trim();
+      if (!text || /no\s+feature|not\s+found/i.test(text)) return;
+
+      let cvegeo = null;
+      const m1 = text.match(/Clave\s+Geoestad[íi]stica[^\d]*(\d{13,16})/i);
+      if (m1) cvegeo = m1[1];
+      if (!cvegeo) {
+        const m2 = text.match(/\b(\d{13,16})\b/);
+        if (m2) cvegeo = m2[1];
+      }
+      if (!cvegeo) return;
+
+      const mza = cvegeo.slice(-3);
+      L.popup({ maxWidth: 280, minWidth: 220 })
+        .setLatLng(e.latlng)
+        .setContent(`
+          <div style="font-family:system-ui;font-size:13px;line-height:1.4">
+            <div style="font-weight:900;color:#0d3333;font-size:15px;margin-bottom:4px">
+              🏘️ Manzana <span style="color:#8B2942">${mza}</span>
+            </div>
+            <div style="font-size:11px;color:#666;font-family:ui-monospace,monospace">
+              CVEGEO: ${cvegeo}
+            </div>
+          </div>
+        `)
+        .openOn(MAP);
+    } catch (err) {
+      // Falla silenciosa (probablemente no hay proxy configurado)
+      console.warn('[WMS click]', err && err.message);
+    }
+  });
+
+  /* ═══════════════════════════════════════════════════════════════
+     📢 TOAST
+     ═══════════════════════════════════════════════════════════════ */
+  let _toastTimer = null;
+  function toast(msg, isError){
+    const t = document.getElementById('toast');
+    if (!t) return;
+    t.textContent = msg;
+    t.classList.toggle('err', !!isError);
+    t.classList.add('show');
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+     🎮 WIRING DE BOTONES
+     ═══════════════════════════════════════════════════════════════ */
+  document.getElementById('btnMyLoc').addEventListener('click', toggleMyLocation);
+
+  document.getElementById('btnInegi').addEventListener('click', (ev) => {
+    INEGI_ACTIVE = !INEGI_ACTIVE;
+    ev.currentTarget.classList.toggle('on', INEGI_ACTIVE);
+    applyInegi();
+    toast(INEGI_ACTIVE ? '🇲🇽 Capas INEGI activadas' : 'Mapa base restaurado');
+    if (navigator.vibrate) navigator.vibrate(15);
+  });
+
+  document.getElementById('btnLayer').addEventListener('click', () => {
+    cycleBaseLayer();
+    if (navigator.vibrate) navigator.vibrate(10);
+  });
+
+  document.getElementById('btnFit').addEventListener('click', () => {
+    if (!navigator.geolocation) {
+      MAP.setView(CENTER, START_ZOOM, { animate: true });
+      return;
+    }
+    toast('Centrando en tu ubicación…');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => MAP.setView([pos.coords.latitude, pos.coords.longitude], 18, { animate: true }),
+      () => {
+        MAP.setView(CENTER, START_ZOOM, { animate: true });
+        toast('Usando ubicación por defecto', 1);
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  });
+
+  /* ═══════════════════════════════════════════════════════════════
+     🩹 FIX: invalidar tamaño al cargar (por si el layout tarda)
+     ═══════════════════════════════════════════════════════════════ */
+  setTimeout(() => MAP.invalidateSize(), 200);
+  window.addEventListener('resize', () => MAP.invalidateSize());
+
+  /* ═══════════════════════════════════════════════════════════════
+     🚪 Al salir de la página → apagar GPS (ahorra batería)
+     ═══════════════════════════════════════════════════════════════ */
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && userLocWatch != null) {
+      try { navigator.geolocation.clearWatch(userLocWatch); } catch(e){}
+      userLocWatch = null;
+    }
+  });
+
+})();
+</script>
+
+</body>
+</html>
