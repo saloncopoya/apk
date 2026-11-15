@@ -3,7 +3,7 @@ name: Build APK
 on:
   push:
     branches: [ main ]
-  workflow_dispatch: # Permite ejecutarlo manualmente desde la pestaña Actions
+  workflow_dispatch:
 
 jobs:
   build:
@@ -21,23 +21,20 @@ jobs:
       - name: Copy web files to Android assets
         run: |
           mkdir -p android-app/app/src/main/assets/www
-          # Copia todo lo que está en la raíz excepto las carpetas del propio proyecto Android y GitHub
           rsync -av --exclude='android-app' --exclude='.git' --exclude='.github' ./ android-app/app/src/main/assets/www/
-        # Si tu index.html está en la raíz, se copiará como assets/www/index.html
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x android-app/gradlew
-        # Nota: Aún no tenemos gradlew. Lo generaremos en el siguiente paso.
 
       - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Generate Gradle wrapper
         run: |
           cd android-app
           gradle wrapper --gradle-version 8.4
-          chmod +x gradlew
 
       - name: Build APK
         run: |
           cd android-app
+          chmod +x gradlew
           ./gradlew assembleDebug
 
       - name: Upload APK
