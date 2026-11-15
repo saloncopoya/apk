@@ -1,0 +1,47 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: # Permite ejecutarlo manualmente desde la pestaña Actions
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Copy web files to Android assets
+        run: |
+          mkdir -p android-app/app/src/main/assets/www
+          # Copia todo lo que está en la raíz excepto las carpetas del propio proyecto Android y GitHub
+          rsync -av --exclude='android-app' --exclude='.git' --exclude='.github' ./ android-app/app/src/main/assets/www/
+        # Si tu index.html está en la raíz, se copiará como assets/www/index.html
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x android-app/gradlew
+        # Nota: Aún no tenemos gradlew. Lo generaremos en el siguiente paso.
+
+      - name: Setup Gradle
+        run: |
+          cd android-app
+          gradle wrapper --gradle-version 8.4
+          chmod +x gradlew
+
+      - name: Build APK
+        run: |
+          cd android-app
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: salon-copoya-apk
+          path: android-app/app/build/outputs/apk/debug/app-debug.apk
