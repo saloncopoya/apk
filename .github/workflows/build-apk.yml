@@ -21,6 +21,7 @@ jobs:
       - name: Copy web files to Android assets
         run: |
           mkdir -p android-app/app/src/main/assets/www
+          # Copia todos los archivos de la raíz a la carpeta de assets, excluyendo carpetas de sistema
           rsync -av --exclude='android-app' --exclude='.git' --exclude='.github' ./ android-app/app/src/main/assets/www/
 
       - name: Setup Gradle
@@ -36,7 +37,7 @@ jobs:
           fi
           chmod +x ./gradlew
 
-      - name: Build APK
+      - name: Build Debug APK
         working-directory: android-app
         run: ./gradlew assembleDebug --no-daemon --stacktrace
 
