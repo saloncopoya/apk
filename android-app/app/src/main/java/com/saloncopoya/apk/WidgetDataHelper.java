@@ -3,6 +3,7 @@ package com.saloncopoya.apk;
 import android.appwidget.AppWidgetManager;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.util.Log;
 
 import org.json.JSONArray;
@@ -14,25 +15,25 @@ public class WidgetDataHelper {
     public static final String KEY_SCHEDULE = "schedule_today";
     public static final String KEY_PUSHED   = "pushed_once";
 
-    /** Guarda el JSON y fuerza refresh COMPLETO del widget (header + lista). */
     public static void updateSchedule(Context ctx, String json) {
         try {
             String clean = (json == null || json.trim().isEmpty()) ? "[]" : json;
             int n = 0;
             try { n = new JSONArray(clean).length(); } catch (Exception ignored) {}
 
-            ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-               .edit()
-               .putString(KEY_SCHEDULE, clean)
-               .putBoolean(KEY_PUSHED, true)
-               .commit();
+            SharedPreferences sp = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+            sp.edit()
+              .putString(KEY_SCHEDULE, clean)
+              .putBoolean(KEY_PUSHED, true)
+              .commit();
 
-            Log.d(TAG, "updateSchedule OK · items=" + n + " · json=" + clean.substring(0, Math.min(200, clean.length())));
+            // 🔍 Log MUY visible para logcat
+            Log.e(TAG, ">>> PUSH RECIBIDO items=" + n + " json=" + clean.substring(0, Math.min(500, clean.length())));
 
-            // 🔑 Forzar refresco COMPLETO del widget (no solo la lista)
             AppWidgetManager mgr = AppWidgetManager.getInstance(ctx);
             ComponentName cn = new ComponentName(ctx, ListAppWidgetProvider.class);
             int[] ids = mgr.getAppWidgetIds(cn);
+            Log.e(TAG, ">>> Widget IDs en pantalla: " + (ids == null ? 0 : ids.length));
             if (ids != null && ids.length > 0) {
                 ListAppWidgetProvider.renderWidgets(ctx, mgr, ids);
             }
