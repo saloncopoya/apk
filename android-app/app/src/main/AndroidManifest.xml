@@ -31,22 +31,18 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- Atajos (Shortcuts) -->
             <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
         </activity>
 
-        <!-- Servicio de la Ventana Flotante -->
         <service
             android:name=".FloatingWindowService"
             android:exported="false"
             android:foregroundServiceType="specialUse">
-            <!-- 🔥 REQUERIDO por Android 14 para foregroundServiceType="specialUse" -->
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Floating overlay window that shows the web app over other applications for quick access" />
         </service>
 
-        <!-- Atajo en la Barra de Notificaciones (Quick Settings) -->
         <service
             android:name=".MyQSTileService"
             android:exported="true"
@@ -58,7 +54,6 @@
             </intent-filter>
         </service>
 
-        <!-- Widget -->
         <receiver
             android:name=".ListAppWidgetProvider"
             android:exported="true">
