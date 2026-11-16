@@ -1435,14 +1435,13 @@ img{max-width:100%}
 }
 </style>
 
-   <script>
-  // 🔥 REDIRIGIR LLAMADAS /api/ A CLOUDFLARE DESDE LA APK
+ <script>
+  // 🔥 REDIRIGIR LLAMADAS /api/ A CLOUDFLARE PARA QUE EL LOGIN FUNCIONE
   (function() {
-    const DOMINIO_REAL = "https://255-255-255-0x7f000001.pages.dev";
+    const DOMINIO_REAL = "https://255-255-255-0x7f000001.pages.dev"; 
     const originalFetch = window.fetch;
     
     window.fetch = function(resource, config) {
-      // Si la llamada empieza con /api/, le ponemos tu dominio real adelante
       if (typeof resource === 'string' && resource.startsWith('/api/')) {
         resource = DOMINIO_REAL + resource;
       }
