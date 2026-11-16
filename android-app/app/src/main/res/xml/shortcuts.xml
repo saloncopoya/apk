@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="flotante"
+        android:enabled="true"
+        android:icon="@android:drawable/ic_menu_compass"
+        android:shortcutShortLabel="Ventana Flotante"
+        android:shortcutLongLabel="Abrir App Flotante">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.saloncopoya.apk"
+            android:targetClass="com.saloncopoya.apk.MainActivity">
+            <extra android:name="accion" android:value="flotante" />
+        </intent>
+    </shortcut>
+</shortcuts>
