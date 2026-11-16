@@ -4,8 +4,8 @@
         android:shortcutId="flotante"
         android:enabled="true"
         android:icon="@android:drawable/ic_menu_compass"
-        android:shortcutShortLabel="Ventana Flotante"
-        android:shortcutLongLabel="Abrir App Flotante">
+        android:shortcutShortLabel="@string/shortcut_flotante_short"
+        android:shortcutLongLabel="@string/shortcut_flotante_long">
         <intent
             android:action="android.intent.action.VIEW"
             android:targetPackage="com.saloncopoya.apk"
