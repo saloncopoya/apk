@@ -39,7 +39,7 @@ public class MainActivity extends AppCompatActivity {
 
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true); // Clave para Firebase
+        settings.setDomStorageEnabled(true); // Clave para Firebase y Service Workers
         settings.setDatabaseEnabled(true);
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(true);
@@ -53,16 +53,14 @@ public class MainActivity extends AppCompatActivity {
         cookieManager.setAcceptCookie(true);
         cookieManager.setAcceptThirdPartyCookies(webView, true);
 
-        // 3. Habilitar Service Workers (Para tu sw.js y modo offline)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            settings.setServiceWorkerEnabled(true);
-        }
+        // (NOTA: La línea de setServiceWorkerEnabled se eliminó porque no existe en Android, 
+        // los Service Workers se activan solos con JavaScript y DomStorage).
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         }
 
-        // 4. Cargador de archivos locales
+        // 3. Cargador de archivos locales
         final WebViewAssetLoader assetLoader = new WebViewAssetLoader.Builder()
                 .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
                 .build();
@@ -85,7 +83,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // 5. Permisos de la Web (Cámara / GPS)
+        // 4. Permisos de la Web (Cámara / GPS)
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
@@ -98,7 +96,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // 6. Cargar tu PWA
+        // 5. Cargar tu PWA
         webView.loadUrl("https://appassets.androidplatform.net/assets/www/index.html");
     }
 
