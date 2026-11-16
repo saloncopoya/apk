@@ -110,11 +110,11 @@ public class FloatingWindowService extends Service {
 
         // 🆕 Botón COPIAR TEXTO
 floatingView.findViewById(R.id.btnCopyText).setOnClickListener(v -> {
-    if (CopyTextAccessibilityService.getInstance() == null) {
+    CopyTextAccessibilityService svc = CopyTextAccessibilityService.getInstance();
+    if (svc == null) {
         Toast.makeText(this,
             "⚠️ Activa el servicio en: Ajustes → Accesibilidad → Salon Copoya 2026",
             Toast.LENGTH_LONG).show();
-        // Abrir ajustes de accesibilidad para que lo active
         try {
             Intent acc = new Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS);
             acc.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -124,16 +124,25 @@ floatingView.findViewById(R.id.btnCopyText).setOnClickListener(v -> {
         }
         return;
     }
-    String text = CopyTextAccessibilityService.getInstance().copyAllTextFromScreen();
-    if (text != null && !text.trim().isEmpty()) {
-        Toast.makeText(this,
-            "✅ Texto copiado (" + text.length() + " caracteres)",
-            Toast.LENGTH_SHORT).show();
-    } else {
-        Toast.makeText(this,
-            "⚠️ No se encontró texto en la pantalla",
-            Toast.LENGTH_SHORT).show();
-    }
+
+    // 🔑 TRUCO CLAVE: ocultar la ventana flotante 200ms para que la app de abajo
+    // sea la ventana "activa" para el servicio de accesibilidad
+    floatingView.setAlpha(0.01f);   // casi invisible (no GONE para no perder el layout)
+
+    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+        String text = svc.copyAllTextFromScreen();
+        floatingView.setAlpha(1f);  // restaurar visibilidad
+
+        if (text != null && !text.trim().isEmpty()) {
+            Toast.makeText(this,
+                "✅ Texto copiado (" + text.length() + " caracteres)",
+                Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(this,
+                "⚠️ No se encontró texto. Abre la app con texto y vuelve a intentar.",
+                Toast.LENGTH_LONG).show();
+        }
+    }, 250);
 });
         
         floatingView.findViewById(R.id.btnResizeToggle).setOnClickListener(v -> {
