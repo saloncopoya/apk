@@ -34,12 +34,11 @@ public class MainActivity extends AppCompatActivity {
         webView = new WebView(this);
         setContentView(webView);
 
-        // 1. Pedir permisos de GPS y Cámara
         pedirPermisos();
 
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true); // Clave para Firebase y Service Workers
+        settings.setDomStorageEnabled(true); // Crucial para guardar el token de sesión
         settings.setDatabaseEnabled(true);
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(true);
@@ -47,20 +46,21 @@ public class MainActivity extends AppCompatActivity {
         settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setUseWideViewPort(true);
         settings.setLoadWithOverviewMode(true);
+        settings.setJavaScriptCanOpenWindowsAutomatically(true); // Para popups de login
+        settings.setSupportMultipleWindows(false); 
 
-        // 2. Habilitar Cookies (CRUCIAL para el login)
+        // 🔥 TRUCO 1: Hacerse pasar por Chrome real para evitar bloqueos de Firebase/Google
+        settings.setUserAgentString("Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
+
+        // 🔥 TRUCO 2: Habilitar Cookies de Terceros (Necesario para Login)
         CookieManager cookieManager = CookieManager.getInstance();
         cookieManager.setAcceptCookie(true);
         cookieManager.setAcceptThirdPartyCookies(webView, true);
-
-        // (NOTA: La línea de setServiceWorkerEnabled se eliminó porque no existe en Android, 
-        // los Service Workers se activan solos con JavaScript y DomStorage).
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         }
 
-        // 3. Cargador de archivos locales
         final WebViewAssetLoader assetLoader = new WebViewAssetLoader.Builder()
                 .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
                 .build();
@@ -74,7 +74,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 String url = request.getUrl().toString();
-                if (url.startsWith("whatsapp://") || url.startsWith("mailto:") || url.startsWith("tel:")) {
+                // Si es un enlace externo (WhatsApp, correo, teléfono o Google OAuth), abrir fuera
+                if (url.startsWith("whatsapp://") || url.startsWith("mailto:") || url.startsWith("tel:") || url.contains("accounts.google.com")) {
                     Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
                     startActivity(intent);
                     return true;
@@ -83,7 +84,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // 4. Permisos de la Web (Cámara / GPS)
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
@@ -96,7 +96,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // 5. Cargar tu PWA
+        // Cargar tu PWA
         webView.loadUrl("https://appassets.androidplatform.net/assets/www/index.html");
     }
 
