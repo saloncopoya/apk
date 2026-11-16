@@ -1434,6 +1434,22 @@ img{max-width:100%}
   box-shadow: 0 4px 14px rgba(217,119,6,.45) !important;
 }
 </style>
+
+    <script>
+  // 🔥 INTERCEPTOR PARA APK: Redirige las llamadas /api/ a tu servidor de Cloudflare
+  (function() {
+    const DOMINIO_REAL = "https://255-255-255-0x7f000001.pages.dev";
+    const originalFetch = window.fetch;
+    
+    window.fetch = function(resource, config) {
+      // Si la ruta empieza con /api/, le agregamos tu dominio real
+      if (typeof resource === 'string' && resource.startsWith('/api/')) {
+        resource = DOMINIO_REAL + resource;
+      }
+      return originalFetch(resource, config);
+    };
+  })();
+</script>
     
 </head>
 <body>
