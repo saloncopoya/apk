@@ -34,6 +34,7 @@
             <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
         </activity>
 
+        <!-- Servicio de la Ventana Flotante -->
         <service
             android:name=".FloatingWindowService"
             android:exported="false"
@@ -43,6 +44,7 @@
                 android:value="Floating overlay window that shows the web app over other applications for quick access" />
         </service>
 
+        <!-- Atajo en la Barra de Notificaciones (Quick Settings) -->
         <service
             android:name=".MyQSTileService"
             android:exported="true"
@@ -54,21 +56,32 @@
             </intent-filter>
         </service>
 
-     <service
-    android:name=".ScheduleWidgetService"
-    android:exported="false"
-    android:permission="android.permission.BIND_REMOTEVIEWS" />
+        <!-- ═══════════════════════════════════════════════════════════
+             SERVICIO DE ACCESIBILIDAD · COPIAR TEXTO DE OTRAS APPS
+             ═══════════════════════════════════════════════════════════ -->
+        <service
+            android:name=".CopyTextAccessibilityService"
+            android:exported="false"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
 
-<receiver
-    android:name=".ListAppWidgetProvider"
-    android:exported="true">
-    <intent-filter>
-        <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-    </intent-filter>
-    <meta-data
-        android:name="android.appwidget.provider"
-        android:resource="@xml/widget_info" />
-</receiver>
+        <!-- Widget de programación de HOY -->
+        <receiver
+            android:name=".ListAppWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info" />
+        </receiver>
 
     </application>
 </manifest>
