@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">Salon Copoya 2026</string>
+
+    <!-- Etiquetas del atajo (shortcut) -->
+    <string name="shortcut_flotante_short">Ventana Flotante</string>
+    <string name="shortcut_flotante_long">Abrir App Flotante</string>
+
+    <!-- Etiqueta del Quick Settings Tile (recomendado, no obligatorio) -->
+    <string name="qs_tile_label">Atajo V2</string>
 </resources>
