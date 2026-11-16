@@ -12011,5 +12011,58 @@ if (document.readyState === 'loading') {
   }
   
 
+  /* ═══════════════════════════════════════════════════════════════
+   📲 WIDGET BRIDGE · empuja la programación de HOY al widget
+   ═══════════════════════════════════════════════════════════════ */
+function __pushScheduleToWidget() {
+  if (!window.WidgetBridge) return;
+  try {
+    const t = (typeof today === 'function') ? today() :
+              (() => { const d = new Date();
+                return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
+    const arr = [];
+    for (const id in P) {
+      const p = P[id];
+      if (!p || p.prog_fecha !== t) continue;
+      arr.push({
+        id,
+        n: p.nombre || '',
+        c: p.colonia || '',
+        h: p.prog_hora || '',
+        tel: String(p.tel1 || p.tel2 || '').replace(/\D/g, '')
+      });
+    }
+    arr.sort((a, b) => a.n.localeCompare(b.n, 'es'));
+    WidgetBridge.updateSchedule(JSON.stringify(arr));
+  } catch (e) { console.warn('[widget push]', e); }
+}
+
+/* Función que llama Android al tocar una fila del widget */
+window.__openPatientFromWidget = function (pid) {
+  try {
+    if (typeof openDetail === 'function') return openDetail(pid);
+    if (typeof openD === 'function') return openD(pid);
+    if (typeof showDetail === 'function') return showDetail(pid);
+    // fallback: setear cur y tab
+    if (typeof cur !== 'undefined' && typeof tab === 'function' && P[pid]) {
+      cur = pid;
+      tab(0, true);
+      const det = document.querySelector('#detail');
+      if (det) det.hidden = false;
+    }
+  } catch (e) { console.warn('[widget open]', e); }
+};
+
+/* Push al cargar + al volver a la app */
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(__pushScheduleToWidget, 2000);
+});
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') setTimeout(__pushScheduleToWidget, 800);
+});
+/* Push cada 60s por si el usuario deja la app abierta */
+setInterval(__pushScheduleToWidget, 60000);
+
+
   
 })();
