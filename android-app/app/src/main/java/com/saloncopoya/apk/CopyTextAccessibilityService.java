@@ -6,57 +6,69 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
-import android.widget.Toast;
-
-import java.util.List;
 
 public class CopyTextAccessibilityService extends AccessibilityService {
 
+    private static CopyTextAccessibilityService instance;
+
+    public static CopyTextAccessibilityService getInstance() {
+        return instance;
+    }
+
+    @Override
+    protected void onServiceConnected() {
+        super.onServiceConnected();
+        instance = this;
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        instance = null;
+    }
+
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
-        // No hacemos nada aquí. El servicio solo se usa cuando la ventana flotante lo invoca.
+        // No hacer nada. Solo se usa cuando la burbuja lo invoca.
     }
 
     @Override
     public void onInterrupt() {}
 
     /**
-     * Este método es llamado desde FloatingWindowService.
-     * Recorre el árbol de accesibilidad de la ventana activa y extrae todo el texto.
+     * Recorre el árbol de accesibilidad de la app activa y copia todo el texto.
+     * Devuelve el texto copiado o null si no encontró nada.
      */
     public String copyAllTextFromScreen() {
-        AccessibilityNodeInfo rootNode = getRootInActiveWindow();
-        if (rootNode == null) {
-            return null;
-        }
+        AccessibilityNodeInfo root = getRootInActiveWindow();
+        if (root == null) return null;
 
-        StringBuilder allText = new StringBuilder();
-        extractText(rootNode, allText);
-        
-        if (allText.length() > 0) {
-            ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-            ClipData clip = ClipData.newPlainText("Texto copiado", allText.toString());
-            clipboard.setPrimaryClip(clip);
-            return allText.toString();
-        }
-        return null;
+        StringBuilder sb = new StringBuilder();
+        extractText(root, sb);
+
+        String text = sb.toString().trim();
+        if (text.isEmpty()) return null;
+
+        ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        ClipData clip = ClipData.newPlainText("Texto copiado", text);
+        cm.setPrimaryClip(clip);
+        return text;
     }
 
-    private void extractText(AccessibilityNodeInfo node, StringBuilder builder) {
+    private void extractText(AccessibilityNodeInfo node, StringBuilder sb) {
         if (node == null) return;
 
-        // Extraer texto del nodo
         if (node.getText() != null) {
-            builder.append(node.getText().toString()).append("\n");
+            String t = node.getText().toString().trim();
+            if (!t.isEmpty()) sb.append(t).append('\n');
         }
-        // Si tiene contenido de descripción (a veces el texto está aquí)
         if (node.getContentDescription() != null) {
-            builder.append(node.getContentDescription().toString()).append("\n");
+            String d = node.getContentDescription().toString().trim();
+            if (!d.isEmpty()) sb.append(d).append('\n');
         }
 
-        // Recorrer hijos
         for (int i = 0; i < node.getChildCount(); i++) {
-            extractText(node.getChild(i), builder);
+            extractText(node.getChild(i), sb);
         }
     }
 }
