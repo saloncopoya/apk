@@ -11,8 +11,6 @@ import android.content.pm.ServiceInfo;
 import android.graphics.PixelFormat;
 import android.os.Build;
 import android.os.IBinder;
-import android.os.VibrationEffect;
-import android.os.Vibrator;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -45,11 +43,9 @@ public class FloatingWindowService extends Service {
         super.onCreate();
         Log.i(TAG, "onCreate - SDK=" + Build.VERSION.SDK_INT);
 
-        // 1. Canal + notificación
         crearCanalNotificacion();
         Notification notif = construirNotificacion();
 
-        // 2. Entrar a foreground con tipo correcto
         try {
             if (Build.VERSION.SDK_INT >= 34) {
                 startForeground(NOTIFICATION_ID, notif,
@@ -69,7 +65,6 @@ public class FloatingWindowService extends Service {
             }
         }
 
-        // 3. Montar overlay
         try {
             mostrarVentanaFlotante();
         } catch (Exception e) {
@@ -81,9 +76,9 @@ public class FloatingWindowService extends Service {
     private void mostrarVentanaFlotante() {
         windowManager = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
 
-        floatingView   = LayoutInflater.from(this).inflate(R.layout.floating_window, null);
-        collapsedRoot  = floatingView.findViewById(R.id.collapsedRoot);
-        expandedRoot   = floatingView.findViewById(R.id.expandedRoot);
+        floatingView    = LayoutInflater.from(this).inflate(R.layout.floating_window, null);
+        collapsedRoot   = floatingView.findViewById(R.id.collapsedRoot);
+        expandedRoot    = floatingView.findViewById(R.id.expandedRoot);
         floatingWebView = floatingView.findViewById(R.id.floatingWebView);
 
         int layoutType = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
@@ -101,21 +96,10 @@ public class FloatingWindowService extends Service {
         params.x = 80;
         params.y = 200;
 
-        // ── Listeners de botones ──
         collapsedRoot.setOnClickListener(v -> setExpanded(true));
 
         floatingView.findViewById(R.id.btnClose).setOnClickListener(v -> stopSelf());
         floatingView.findViewById(R.id.btnCollapse).setOnClickListener(v -> setExpanded(false));
-
-        floatingView.findViewById(R.id.btnVibrate).setOnClickListener(v -> {
-            Vibrator vib = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-            if (vib == null || !vib.hasVibrator()) return;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                vib.vibrate(VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE));
-            } else {
-                vib.vibrate(300);
-            }
-        });
 
         floatingView.findViewById(R.id.btnNotify).setOnClickListener(v -> {
             NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
@@ -140,7 +124,6 @@ public class FloatingWindowService extends Service {
             startActivity(i);
         });
 
-        // ── Drag + tap (umbral 10px) ──
         View.OnTouchListener dragListener = new View.OnTouchListener() {
             private int initialX, initialY;
             private float initialTouchX, initialTouchY;
@@ -179,7 +162,6 @@ public class FloatingWindowService extends Service {
         collapsedRoot.setOnTouchListener(dragListener);
         floatingView.findViewById(R.id.dragHandle).setOnTouchListener(dragListener);
 
-        // ── WebView ──
         WebSettings s = floatingWebView.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
@@ -204,7 +186,6 @@ public class FloatingWindowService extends Service {
         if (collapsedRoot != null) collapsedRoot.setVisibility(expand ? View.GONE : View.VISIBLE);
         if (expandedRoot  != null) expandedRoot.setVisibility(expand ? View.VISIBLE : View.GONE);
 
-        // Burbuja: no-focusable | Panel: focusable (para que WebView acepte toques/teclado)
         if (expand) {
             params.flags &= ~WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
         } else {
