@@ -37,7 +37,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Shortcut "flotante" → arranca directo el modo flotante
         if (esIntentFlotante(getIntent())) {
             iniciarVentanaFlotante();
             return;
@@ -106,17 +105,13 @@ public class MainActivity extends AppCompatActivity {
         return intent != null && "flotante".equals(intent.getStringExtra("accion"));
     }
 
-    // ─────────── FLUJO FLOTANTE ───────────
-
     private void iniciarVentanaFlotante() {
-        // 1) Overlay
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
             Intent i = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                     Uri.parse("package:" + getPackageName()));
             startActivityForResult(i, OVERLAY_PERMISSION_REQUEST_CODE);
             return;
         }
-        // 2) Notificaciones (Android 13+) — ESPERAMOS el resultado
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
                 && ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
                     != PackageManager.PERMISSION_GRANTED) {
@@ -126,7 +121,6 @@ public class MainActivity extends AppCompatActivity {
                     NOTIFICATIONS_PERMISSION_REQUEST);
             return;
         }
-        // 3) Todo listo → servicio + minimizar
         arrancarServicioFlotante();
     }
 
@@ -141,7 +135,6 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
             return;
         }
-        // Minimiza la app (NO finish)
         moveTaskToBack(true);
     }
 
@@ -150,7 +143,7 @@ public class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == OVERLAY_PERMISSION_REQUEST_CODE) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) {
-                iniciarVentanaFlotante(); // re-evaluar todo
+                iniciarVentanaFlotante();
             } else {
                 Toast.makeText(this, "Sin permiso de overlay no funciona la burbuja", Toast.LENGTH_LONG).show();
                 finish();
@@ -163,12 +156,9 @@ public class MainActivity extends AppCompatActivity {
                                            @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == NOTIFICATIONS_PERMISSION_REQUEST) {
-            // Continue regardless of grant — el servicio funciona igual
             arrancarServicioFlotante();
         }
     }
-
-    // ─────────── PERMISOS NORMALES ───────────
 
     private void pedirPermisosNormales() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
