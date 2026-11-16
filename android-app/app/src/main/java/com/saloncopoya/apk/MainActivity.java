@@ -7,6 +7,7 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.webkit.ConsoleMessage;
 import android.webkit.CookieManager;
 import android.webkit.GeolocationPermissions;
 import android.webkit.PermissionRequest;
@@ -15,6 +16,7 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
+import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -38,21 +40,25 @@ public class MainActivity extends AppCompatActivity {
 
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true); // Crucial para guardar el token de sesión
+        settings.setDomStorageEnabled(true); 
         settings.setDatabaseEnabled(true);
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(true);
+        
+        // 🔥 PERMISOS EXTRA PARA QUE EL LOGIN Y LAS FOTOS FUNCIONEN
+        settings.setAllowFileAccessFromFileURLs(true);
+        settings.setAllowUniversalAccessFromFileURLs(true);
+
         settings.setGeolocationEnabled(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setUseWideViewPort(true);
         settings.setLoadWithOverviewMode(true);
-        settings.setJavaScriptCanOpenWindowsAutomatically(true); // Para popups de login
-        settings.setSupportMultipleWindows(false); 
+        settings.setJavaScriptCanOpenWindowsAutomatically(true); 
 
-        // 🔥 TRUCO 1: Hacerse pasar por Chrome real para evitar bloqueos de Firebase/Google
-        settings.setUserAgentString("Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
+        // 🔥 Hacerse pasar por un Chrome real (evita bloqueos de Cloudflare/Firebase)
+        settings.setUserAgentString("Mozilla/5.0 (Linux; Android 13; SM-S908B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
 
-        // 🔥 TRUCO 2: Habilitar Cookies de Terceros (Necesario para Login)
+        // 🔥 Habilitar Cookies para que la sesión no se cierre
         CookieManager cookieManager = CookieManager.getInstance();
         cookieManager.setAcceptCookie(true);
         cookieManager.setAcceptThirdPartyCookies(webView, true);
@@ -74,8 +80,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 String url = request.getUrl().toString();
-                // Si es un enlace externo (WhatsApp, correo, teléfono o Google OAuth), abrir fuera
-                if (url.startsWith("whatsapp://") || url.startsWith("mailto:") || url.startsWith("tel:") || url.contains("accounts.google.com")) {
+                if (url.startsWith("whatsapp://") || url.startsWith("mailto:") || url.startsWith("tel:")) {
                     Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
                     startActivity(intent);
                     return true;
@@ -94,9 +99,17 @@ public class MainActivity extends AppCompatActivity {
             public void onPermissionRequest(final PermissionRequest request) {
                 runOnUiThread(() -> request.grant(request.getResources()));
             }
+
+            // 🔥 ESTO NOS DIRÁ EL ERROR EXACTO SI EL LOGIN FALLA
+            @Override
+            public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
+                if (consoleMessage.messageLevel() == ConsoleMessage.MessageLevel.ERROR) {
+                    Toast.makeText(MainActivity.this, "Error JS: " + consoleMessage.message(), Toast.LENGTH_LONG).show();
+                }
+                return super.onConsoleMessage(consoleMessage);
+            }
         });
 
-        // Cargar tu PWA
         webView.loadUrl("https://appassets.androidplatform.net/assets/www/index.html");
     }
 
