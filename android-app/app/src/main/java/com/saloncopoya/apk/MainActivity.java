@@ -8,6 +8,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.util.Log;
 import android.webkit.CookieManager;
 import android.webkit.GeolocationPermissions;
 import android.webkit.PermissionRequest;
@@ -21,9 +22,11 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 public class MainActivity extends AppCompatActivity {
+    private static final String TAG = "MainActivity";
     private WebView webView;
     private static final int PERMISSION_REQUEST_CODE = 1001;
     private static final int OVERLAY_PERMISSION_REQUEST_CODE = 1002;
+    private static final int NOTIFICATIONS_PERMISSION_REQUEST_CODE = 1003;
 
     private static final String APP_URL = "https://255-255-255-0x7f000001.pages.dev/";
 
@@ -32,10 +35,9 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // 🔥 1. Detectar si venimos del atajo "Ventana Flotante"
-        if (getIntent() != null && "flotante".equals(getIntent().getStringExtra("accion"))) {
+        if (esIntentFlotante(getIntent())) {
             iniciarVentanaFlotante();
-            return; // No cargar la app normal
+            return;
         }
 
         // --- Flujo normal de la app ---
@@ -96,11 +98,23 @@ public class MainActivity extends AppCompatActivity {
         webView.loadUrl(APP_URL);
     }
 
-    // 🔥 2. Lógica para abrir la ventana flotante
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        if (esIntentFlotante(intent)) {
+            iniciarVentanaFlotante();
+        }
+    }
+
+    private boolean esIntentFlotante(Intent intent) {
+        return intent != null && "flotante".equals(intent.getStringExtra("accion"));
+    }
+
     private void iniciarVentanaFlotante() {
-        // Verificar permiso de superposición
+        // 1. Verificar overlay
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
-            // Pedir permiso al usuario
+            Log.w(TAG, "Falta permiso SYSTEM_ALERT_WINDOW, solicitando...");
             Intent intent = new Intent(
                     Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                     Uri.parse("package:" + getPackageName())
@@ -109,15 +123,34 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        // Permiso concedido → iniciar el servicio
-        Intent serviceIntent = new Intent(this, FloatingWindowService.class);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(serviceIntent);
-        } else {
-            startService(serviceIntent);
+        // 2. Verificar notificaciones (Android 13+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                && ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                    != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(
+                    this,
+                    new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                    NOTIFICATIONS_PERMISSION_REQUEST_CODE
+            );
+            // No retornamos: aunque el usuario aún no haya decidido, el servicio puede arrancar
+            // (la notificación solo no se mostrará hasta que acepte)
         }
 
-        // Cerrar la actividad para que solo quede la ventana flotante
+        arrancarServicioFlotante();
+    }
+
+    private void arrancarServicioFlotante() {
+        try {
+            Intent serviceIntent = new Intent(this, FloatingWindowService.class);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(serviceIntent);
+            } else {
+                startService(serviceIntent);
+            }
+            Log.i(TAG, "FloatingWindowService iniciado");
+        } catch (Exception e) {
+            Log.e(TAG, "Error al iniciar FloatingWindowService", e);
+        }
         finish();
     }
 
@@ -126,16 +159,10 @@ public class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == OVERLAY_PERMISSION_REQUEST_CODE) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) {
-                // El usuario concedió el permiso → iniciar servicio
-                Intent serviceIntent = new Intent(this, FloatingWindowService.class);
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    startForegroundService(serviceIntent);
-                } else {
-                    startService(serviceIntent);
-                }
-                finish();
+                // Volver a evaluar el flujo completo (notificación + servicio)
+                iniciarVentanaFlotante();
             } else {
-                // No concedió → salir
+                Log.w(TAG, "El usuario no concedió SYSTEM_ALERT_WINDOW");
                 finish();
             }
         }
