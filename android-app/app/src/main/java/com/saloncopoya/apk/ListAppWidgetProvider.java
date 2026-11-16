@@ -8,50 +8,71 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.widget.RemoteViews;
-import android.util.Log;
 
 import org.json.JSONArray;
+import org.json.JSONObject;
 
 public class ListAppWidgetProvider extends AppWidgetProvider {
-
     private static final String TAG = "ListAppWidgetProvider";
 
     @Override
     public void onUpdate(Context context, AppWidgetManager mgr, int[] ids) {
-        renderWidgets(context, mgr, ids);
-    }
-
-    /** 🔑 Método estático para que WidgetDataHelper lo pueda llamar sin instanciar. */
-    public static void renderWidgets(Context context, AppWidgetManager mgr, int[] ids) {
         for (int id : ids) {
             try {
                 RemoteViews rv = new RemoteViews(context.getPackageName(), R.layout.widget_schedule);
-
-                // Header → abre la app
+                // 1. Configurar el header y el botón de refresh
                 Intent openIntent = new Intent(context, MainActivity.class);
-                openIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                PendingIntent openPi = PendingIntent.getActivity(
-                        context, 0, openIntent,
-                        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+                PendingIntent openPi = PendingIntent.getActivity(context, 0, openIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
                 rv.setOnClickPendingIntent(R.id.widget_header, openPi);
 
-                // Botón 🔄 → onUpdate forzado
                 Intent refreshIntent = new Intent(context, ListAppWidgetProvider.class);
                 refreshIntent.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
                 refreshIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids);
-                PendingIntent refreshPi = PendingIntent.getBroadcast(
-                        context, 1, refreshIntent,
-                        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+                PendingIntent refreshPi = PendingIntent.getBroadcast(context, 1, refreshIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
                 rv.setOnClickPendingIntent(R.id.widget_refresh, refreshPi);
 
-                // Adapter del ListView
-                Intent svcIntent = new Intent(context, ScheduleWidgetService.class);
-                svcIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id);
-                svcIntent.setData(Uri.parse(svcIntent.toUri(Intent.URI_INTENT_SCHEME)));
-                rv.setRemoteAdapter(R.id.schedule_list, svcIntent);
-                rv.setEmptyView(R.id.schedule_list, R.id.widget_empty);
+                // 2. Construir los items de la colección
+                RemoteViews.RemoteCollectionItems.Builder builder = new RemoteViews.RemoteCollectionItems.Builder();
+                String json = WidgetDataHelper.readSchedule(context);
+                JSONArray arr = new JSONArray(json);
+                
+                if (arr.length() == 0) {
+                    rv.setTextViewText(R.id.widget_header_text, WidgetDataHelper.hasBeenPushed(context) ? "📅 HOY · sin programados" : "📅 Abre la app para cargar");
+                } else {
+                    rv.setTextViewText(R.id.widget_header_text, "📅 HOY · " + arr.length() + " programados");
+                    for (int i = 0; i < arr.length(); i++) {
+                        JSONObject o = arr.getJSONObject(i);
+                        String pid = o.optString("id");
+                        String nombre = o.optString("n");
+                        String hora = o.optString("h");
+                        String colonia = o.optString("c");
 
-                // Template de click de filas
+                        RemoteViews itemView = new RemoteViews(context.getPackageName(), R.layout.widget_schedule_item);
+                        itemView.setTextViewText(R.id.item_name, nombre);
+                        String sub = (hora.isEmpty() ? "" : "⏰ " + hora) + (colonia.isEmpty() ? "" : (hora.isEmpty() ? "" : " · ") + colonia);
+                        itemView.setTextViewText(R.id.item_sub, sub);
+
+                        // Click en la fila -> abrir app
+                        Intent fillIn = new Intent();
+                        fillIn.putExtra("pid", pid);
+                        itemView.setOnClickFillInIntent(R.id.item_root, fillIn);
+                        
+                        // Click en el botón de llamada
+                        String tel = o.optString("tel");
+                        if (!tel.isEmpty()) {
+                            Intent dial = new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + tel));
+                            PendingIntent dialPi = PendingIntent.getActivity(context, ("dial_" + pid).hashCode(), dial, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+                            itemView.setOnClickPendingIntent(R.id.item_phone_btn, dialPi);
+                        }
+
+                        builder.addItem(i, itemView);
+                    }
+                }
+
+                // 3. Establecer la colección en el widget
+                rv.setRemoteAdapter(R.id.schedule_list, builder.build());
+
+                // 4. Template para el click de las filas
                 Intent templateIntent = new Intent(context, MainActivity.class);
                 templateIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 int flags = PendingIntent.FLAG_UPDATE_CURRENT;
@@ -59,39 +80,10 @@ public class ListAppWidgetProvider extends AppWidgetProvider {
                 PendingIntent templatePi = PendingIntent.getActivity(context, 2, templateIntent, flags);
                 rv.setPendingIntentTemplate(R.id.schedule_list, templatePi);
 
-                // Header dinámico
-                actualizarHeader(context, rv);
-
                 mgr.updateAppWidget(id, rv);
-                mgr.notifyAppWidgetViewDataChanged(id, R.id.schedule_list);
-
-                Log.d(TAG, "renderWidgets OK · appWidgetId=" + id);
             } catch (Exception e) {
-                Log.e(TAG, "renderWidgets err id=" + id, e);
+                android.util.Log.e(TAG, "Error renderizando widget", e);
             }
-        }
-    }
-
-    private static void actualizarHeader(Context ctx, RemoteViews rv) {
-        try {
-            // 1. ¿Nunca llegó push del JS?
-            if (!WidgetDataHelper.hasBeenPushed(ctx)) {
-                rv.setTextViewText(R.id.widget_header_text, "📅 Abre la app para cargar");
-                return;
-            }
-            // 2. ¿Llegó push pero 0 programados hoy?
-            String json = WidgetDataHelper.readSchedule(ctx);
-            int n = 0;
-            try { n = new JSONArray(json).length(); } catch (Exception ignored) {}
-
-            if (n == 0) {
-                rv.setTextViewText(R.id.widget_header_text, "📅 HOY · sin programados");
-            } else {
-                rv.setTextViewText(R.id.widget_header_text,
-                        "📅 HOY · " + n + (n == 1 ? " programado" : " programados"));
-            }
-        } catch (Exception e) {
-            rv.setTextViewText(R.id.widget_header_text, "📅 HOY");
         }
     }
 }
