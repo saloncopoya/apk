@@ -1435,19 +1435,29 @@ img{max-width:100%}
 }
 </style>
 
- <script>
-  // 🔥 REDIRIGIR LLAMADAS /api/ A CLOUDFLARE PARA QUE EL LOGIN FUNCIONE
-  (function() {
-    const DOMINIO_REAL = "https://255-255-255-0x7f000001.pages.dev"; 
-    const originalFetch = window.fetch;
+<script>
+  // 🚀 FORZAR EL FUNCIONAMIENTO DEL BOTÓN DE LOGIN EN LA APK
+  document.addEventListener('DOMContentLoaded', function() {
+    const btn = document.getElementById('lgo');
+    const form = document.getElementById('loginForm');
     
-    window.fetch = function(resource, config) {
-      if (typeof resource === 'string' && resource.startsWith('/api/')) {
-        resource = DOMINIO_REAL + resource;
-      }
-      return originalFetch(resource, config);
-    };
-  })();
+    if (btn) {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault(); // Evita que la página se recargue
+        console.log("Click en Entrar detectado en Android");
+        
+        // Si tu app.js tiene una función global, la llamamos
+        if (typeof window.login === 'function') {
+          window.login();
+        }
+        // Si no, disparamos el submit del formulario manualmente
+        else if (form) {
+          const event = new Event('submit', { cancelable: true, bubbles: true });
+          form.dispatchEvent(event);
+        }
+      });
+    }
+  });
 </script>
     
 </head>
