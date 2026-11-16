@@ -23,8 +23,8 @@ public class MainActivity extends AppCompatActivity {
     private WebView webView;
     private static final int PERMISSION_REQUEST_CODE = 1001;
 
-    // 🔥 TU URL REAL
-    private static final String APP_URL = "https://255-255-255-0x7f000001.pages.dev/index.html";
+    // 🔥 CORREGIDO: Usar solo el dominio base con "/" al final
+    private static final String APP_URL = "https://255-255-255-0x7f000001.pages.dev/";
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -94,7 +94,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Cargar la URL desde internet
+        // Cargar la URL base (sin index.html)
         webView.loadUrl(APP_URL);
     }
 
