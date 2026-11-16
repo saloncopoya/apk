@@ -2,15 +2,20 @@ package com.saloncopoya.apk;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.appwidget.AppWidgetManager;
+import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
 import android.util.Log;
 import android.webkit.CookieManager;
 import android.webkit.GeolocationPermissions;
+import android.webkit.JavascriptInterface;
 import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
@@ -32,10 +37,15 @@ public class MainActivity extends AppCompatActivity {
     private static final int NOTIFICATIONS_PERMISSION_REQUEST = 1003;
     private static final String APP_URL = "https://255-255-255-0x7f000001.pages.dev/";
 
+    private String pendingPid = null;
+
     @SuppressLint("SetJavaScriptEnabled")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // 🆕 Guardar pid pendiente si venimos del widget
+        pendingPid = getIntent().getStringExtra("pid");
 
         if (esIntentFlotante(getIntent())) {
             iniciarVentanaFlotante();
@@ -60,6 +70,14 @@ public class MainActivity extends AppCompatActivity {
         s.setUserAgentString("Mozilla/5.0 (Linux; Android 13; SM-S908B) AppleWebKit/537.36 " +
                 "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
 
+        // 🆕 JS bridge para recibir datos del widget
+        webView.addJavascriptInterface(new Object() {
+            @JavascriptInterface
+            public void updateSchedule(String json) {
+                WidgetDataHelper.updateSchedule(MainActivity.this, json);
+            }
+        }, "WidgetBridge");
+
         CookieManager cm = CookieManager.getInstance();
         cm.setAcceptCookie(true);
         cm.setAcceptThirdPartyCookies(webView, true);
@@ -78,6 +96,17 @@ public class MainActivity extends AppCompatActivity {
                     return true;
                 } catch (Exception e) { return false; }
             }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                // 🆕 Si venimos del widget con un pid, abrir ese paciente
+                if (pendingPid != null) {
+                    final String pid = pendingPid;
+                    pendingPid = null;
+                    view.postDelayed(() -> abrirPacienteDesdeWidget(view, pid), 1800);
+                }
+            }
         });
 
         webView.setWebChromeClient(new WebChromeClient() {
@@ -94,11 +123,32 @@ public class MainActivity extends AppCompatActivity {
         webView.loadUrl(APP_URL);
     }
 
+    /** 🆕 Llama la función JS que abre la ficha del paciente (si existe). */
+    private void abrirPacienteDesdeWidget(WebView view, String pid) {
+        try {
+            String safePid = pid.replace("\\", "\\\\").replace("'", "\\'");
+            String js = "(function(){" +
+                    "var pid='" + safePid + "';" +
+                    "if(typeof window.__openPatientFromWidget==='function'){window.__openPatientFromWidget(pid);}" +
+                    "else if(typeof openDetail==='function'){openDetail(pid);}" +
+                    "else if(typeof openD==='function'){openD(pid);}" +
+                    "})()";
+            view.evaluateJavascript(js, null);
+        } catch (Exception e) { Log.e(TAG, "abrirPaciente", e); }
+    }
+
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
-        if (esIntentFlotante(intent)) iniciarVentanaFlotante();
+
+        if (esIntentFlotante(intent)) { iniciarVentanaFlotante(); return; }
+
+        // 🆕 Si viene del widget estando la app ya abierta
+        String pid = intent.getStringExtra("pid");
+        if (pid != null && webView != null) {
+            abrirPacienteDesdeWidget(webView, pid);
+        }
     }
 
     private boolean esIntentFlotante(Intent intent) {
@@ -129,13 +179,11 @@ public class MainActivity extends AppCompatActivity {
             Intent si = new Intent(this, FloatingWindowService.class);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(si);
             else                                                startService(si);
-            Log.i(TAG, "Service arrancado");
         } catch (Exception e) {
-            Log.e(TAG, "Error al arrancar servicio", e);
             Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
             return;
         }
-        moveTaskToBack(true);
+        new Handler(Looper.getMainLooper()).postDelayed(() -> moveTaskToBack(true), 800);
     }
 
     @Override
