@@ -107,6 +107,35 @@ public class FloatingWindowService extends Service {
         floatingView.findViewById(R.id.btnClose).setOnClickListener(v -> stopSelf());
         floatingView.findViewById(R.id.btnCollapse).setOnClickListener(v -> setExpanded(false));
 
+
+        // 🆕 Botón COPIAR TEXTO
+floatingView.findViewById(R.id.btnCopyText).setOnClickListener(v -> {
+    if (CopyTextAccessibilityService.getInstance() == null) {
+        Toast.makeText(this,
+            "⚠️ Activa el servicio en: Ajustes → Accesibilidad → Salon Copoya 2026",
+            Toast.LENGTH_LONG).show();
+        // Abrir ajustes de accesibilidad para que lo active
+        try {
+            Intent acc = new Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS);
+            acc.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(acc);
+        } catch (Exception e) {
+            Log.e(TAG, "No se pudo abrir accesibilidad", e);
+        }
+        return;
+    }
+    String text = CopyTextAccessibilityService.getInstance().copyAllTextFromScreen();
+    if (text != null && !text.trim().isEmpty()) {
+        Toast.makeText(this,
+            "✅ Texto copiado (" + text.length() + " caracteres)",
+            Toast.LENGTH_SHORT).show();
+    } else {
+        Toast.makeText(this,
+            "⚠️ No se encontró texto en la pantalla",
+            Toast.LENGTH_SHORT).show();
+    }
+});
+        
         floatingView.findViewById(R.id.btnResizeToggle).setOnClickListener(v -> {
             resizeMode = !resizeMode;
             resizeGrip.setVisibility(resizeMode ? View.VISIBLE : View.GONE);
