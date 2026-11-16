@@ -4,7 +4,8 @@
     <!-- Etiquetas del atajo (shortcut) -->
     <string name="shortcut_flotante_short">Ventana Flotante</string>
     <string name="shortcut_flotante_long">Abrir App Flotante</string>
-
+<string name="accessibility_description">Permite copiar texto de cualquier aplicación, incluso si no lo permite.</string>
+    
     <!-- Etiqueta del Quick Settings Tile (recomendado, no obligatorio) -->
     <string name="qs_tile_label">Atajo V2</string>
 </resources>
