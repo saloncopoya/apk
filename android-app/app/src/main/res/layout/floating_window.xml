@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#FFFFFF"
+    android:elevation="12dp">
+
+    <!-- Barra de arrastre superior -->
+    <LinearLayout
+        android:id="@+id/drag_handle"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:background="#6200EE"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="8dp"
+        android:orientation="horizontal">
+        
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="App Flotante"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:textSize="14sp"/>
+
+        <!-- Botón para cambiar tamaño -->
+        <Button
+            android:id="@+id/btn_resize"
+            android:layout_width="wrap_content"
+            android:layout_height="30dp"
+            android:text="⤢"
+            android:textColor="#FFFFFF"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:minWidth="0dp" />
+
+        <!-- Botón minimizar -->
+        <Button
+            android:id="@+id/btn_minimize"
+            android:layout_width="wrap_content"
+            android:layout_height="30dp"
+            android:text="↓"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:minWidth="0dp" />
+
+        <!-- Botón cerrar -->
+        <Button
+            android:id="@+id/btn_close"
+            android:layout_width="wrap_content"
+            android:layout_height="30dp"
+            android:text="✖"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:minWidth="0dp" />
+    </LinearLayout>
+
+    <!-- La página web adentro -->
+    <WebView
+        android:id="@+id/floating_webview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+</LinearLayout>
