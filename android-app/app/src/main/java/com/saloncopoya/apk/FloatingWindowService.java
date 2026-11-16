@@ -20,6 +20,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -46,6 +47,8 @@ public class FloatingWindowService extends Service {
     private boolean webViewCreated = false;
     private boolean isExpanded = false;
     private boolean resizeMode = false;
+    private long lastViewportUpdate = 0;
+    private static final long VIEWPORT_THROTTLE_MS = 100;
 
     @Override
     public void onCreate() {
@@ -53,11 +56,7 @@ public class FloatingWindowService extends Service {
         Log.i(TAG, "═══ onCreate ═══ SDK=" + Build.VERSION.SDK_INT);
         toast("🔄 Iniciando servicio...");
 
-        try {
-            crearCanalNotificacion();
-        } catch (Exception e) {
-            Log.e(TAG, "crearCanal falló", e);
-        }
+        try { crearCanalNotificacion(); } catch (Exception e) { Log.e(TAG, "canal falló", e); }
         Notification notif = construirNotificacion();
 
         boolean fgOk = false;
@@ -69,39 +68,19 @@ public class FloatingWindowService extends Service {
                 startForeground(NOTIFICATION_ID, notif);
             }
             fgOk = true;
-            Log.i(TAG, "startForeground OK");
         } catch (Throwable t1) {
-            Log.e(TAG, "startForeground tipo falló", t1);
-            try {
-                startForeground(NOTIFICATION_ID, notif);
-                fgOk = true;
-                Log.i(TAG, "startForeground OK (2 args)");
-            } catch (Throwable t2) {
-                Log.e(TAG, "startForeground 2-args falló", t2);
-            }
+            try { startForeground(NOTIFICATION_ID, notif); fgOk = true; } catch (Throwable t2) {}
         }
 
-        if (!fgOk) {
-            toast("❌ ERROR: no pudo entrar a foreground");
-            stopSelf();
-            return;
-        }
+        if (!fgOk) { toast("❌ ERROR: no pudo entrar a foreground"); stopSelf(); return; }
 
-        try {
-            mostrarVentanaFlotante();
-        } catch (Throwable t) {
-            Log.e(TAG, "montar overlay falló", t);
-            toast("❌ ERROR: " + t.getClass().getSimpleName());
-            stopSelf();
-        }
+        try { mostrarVentanaFlotante(); }
+        catch (Throwable t) { Log.e(TAG, "montar overlay falló", t); toast("❌ " + t.getClass().getSimpleName()); stopSelf(); }
     }
 
     private void mostrarVentanaFlotante() {
         windowManager = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
-        if (windowManager == null) {
-            toast("❌ WindowManager null");
-            return;
-        }
+        if (windowManager == null) { toast("❌ WindowManager null"); return; }
 
         floatingView = LayoutInflater.from(this).inflate(R.layout.floating_window, null);
         collapsedRoot = floatingView.findViewById(R.id.collapsedRoot);
@@ -124,22 +103,16 @@ public class FloatingWindowService extends Service {
         params.x = 80;
         params.y = 200;
 
-        // ── Burbuja: click expande, drag mueve ──
         collapsedRoot.setOnClickListener(v -> setExpanded(true));
-
-        // ── Header: collapse / close / resize toggle ──
         floatingView.findViewById(R.id.btnClose).setOnClickListener(v -> stopSelf());
         floatingView.findViewById(R.id.btnCollapse).setOnClickListener(v -> setExpanded(false));
 
         floatingView.findViewById(R.id.btnResizeToggle).setOnClickListener(v -> {
             resizeMode = !resizeMode;
             resizeGrip.setVisibility(resizeMode ? View.VISIBLE : View.GONE);
-            toast(resizeMode
-                    ? "⤢ Ajustar tamaño: ON — arrastra ⇲"
-                    : "⤢ Ajustar tamaño: OFF");
+            toast(resizeMode ? "⤢ Resize ON" : "⤢ Resize OFF");
         });
 
-        // ── Drag para MOVER el panel (header + burbuja) ──
         View.OnTouchListener dragListener = new View.OnTouchListener() {
             private int initialX, initialY;
             private float initialTouchX, initialTouchY;
@@ -149,23 +122,18 @@ public class FloatingWindowService extends Service {
             public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
-                        initialX = params.x;
-                        initialY = params.y;
-                        initialTouchX = event.getRawX();
-                        initialTouchY = event.getRawY();
+                        initialX = params.x; initialY = params.y;
+                        initialTouchX = event.getRawX(); initialTouchY = event.getRawY();
                         isDragging = false;
                         return true;
                     case MotionEvent.ACTION_MOVE:
                         float dx = event.getRawX() - initialTouchX;
                         float dy = event.getRawY() - initialTouchY;
-                        if (!isDragging && (Math.abs(dx) > 10f || Math.abs(dy) > 10f)) {
-                            isDragging = true;
-                        }
+                        if (!isDragging && (Math.abs(dx) > 10f || Math.abs(dy) > 10f)) isDragging = true;
                         if (isDragging) {
                             params.x = initialX + (int) dx;
                             params.y = initialY + (int) dy;
-                            try { windowManager.updateViewLayout(floatingView, params); }
-                            catch (Throwable t) { Log.e(TAG, "update drag err", t); }
+                            try { windowManager.updateViewLayout(floatingView, params); } catch (Throwable t) {}
                         }
                         return true;
                     case MotionEvent.ACTION_UP:
@@ -179,10 +147,8 @@ public class FloatingWindowService extends Service {
         collapsedRoot.setOnTouchListener(dragListener);
         floatingView.findViewById(R.id.dragHandle).setOnTouchListener(dragListener);
 
-        // ── Drag del GRIP para REDIMENSIONAR ──
         setupResize();
 
-        // ── addView ──
         try {
             windowManager.addView(floatingView, params);
             Log.i(TAG, "addView OK ✓");
@@ -194,7 +160,7 @@ public class FloatingWindowService extends Service {
         }
     }
 
-    /** Configura el grip de resize (esquina inferior-derecha). */
+    /** ═══ RESIZE con viewport responsive ═══ */
     private void setupResize() {
         final float density = getResources().getDisplayMetrics().density;
         final int minW = (int)(180 * density);
@@ -212,11 +178,9 @@ public class FloatingWindowService extends Service {
                     case MotionEvent.ACTION_DOWN:
                         ViewGroup.LayoutParams lp = panelContent.getLayoutParams();
                         startWidth = lp.width;
-                        if (floatingWebView != null) {
-                            startHeight = floatingWebView.getLayoutParams().height;
-                        } else {
-                            startHeight = (int)(380 * density);
-                        }
+                        startHeight = floatingWebView != null
+                                ? floatingWebView.getLayoutParams().height
+                                : (int)(380 * density);
                         startX = event.getRawX();
                         startY = event.getRawY();
                         return true;
@@ -235,13 +199,51 @@ public class FloatingWindowService extends Service {
                             ViewGroup.LayoutParams lpH = floatingWebView.getLayoutParams();
                             lpH.height = newH;
                             floatingWebView.setLayoutParams(lpH);
+                            // 🆕 Forzar re-layout inmediato
+                            floatingWebView.requestLayout();
+                        }
+
+                        // 🆕 Actualizar viewport (throttled)
+                        long now = System.currentTimeMillis();
+                        if (now - lastViewportUpdate > VIEWPORT_THROTTLE_MS) {
+                            lastViewportUpdate = now;
+                            updateWebViewViewport();
                         }
                         return true;
 
                     case MotionEvent.ACTION_UP:
+                        // 🆕 Actualización final (sin throttle)
+                        updateWebViewViewport();
                         return true;
                 }
                 return false;
+            }
+        });
+    }
+
+    /**
+     * 🔧 LA CLAVE DEL FIX: inyecta un <meta viewport> con el ancho EXACTO
+     *    en CSS px del WebView. Sin esto, el page usa device-width = ancho
+     *    del TELÉFONO, no del WebView, y se corta al hacer la ventana chica.
+     */
+    private void updateWebViewViewport() {
+        if (floatingWebView == null) return;
+        final WebView wv = floatingWebView;
+        wv.post(() -> {
+            try {
+                int wPx = wv.getWidth();
+                if (wPx <= 0) return;
+                float density = getResources().getDisplayMetrics().density;
+                int cssWidth = Math.max(200, Math.round(wPx / density));
+
+                String js = "(function(){" +
+                        "var m=document.querySelector('meta[name=\"viewport\"]');" +
+                        "if(!m){m=document.createElement('meta');m.setAttribute('name','viewport');document.head.appendChild(m);}" +
+                        "m.setAttribute('content','width=" + cssWidth + ", initial-scale=1.0, user-scalable=yes');" +
+                        "})()";
+                wv.evaluateJavascript(js, null);
+            } catch (Throwable t) {
+                Log.e(TAG, "viewport inject err", t);
             }
         });
     }
@@ -251,24 +253,23 @@ public class FloatingWindowService extends Service {
         if (collapsedRoot != null) collapsedRoot.setVisibility(expand ? View.GONE : View.VISIBLE);
         if (expandedRoot  != null) expandedRoot.setVisibility(expand ? View.VISIBLE : View.GONE);
 
-        if (expand && !webViewCreated) {
-            crearWebViewDiferido();
-        }
+        if (expand && !webViewCreated) crearWebViewDiferido();
 
-        // Al colapsar: salir del modo resize
         if (!expand) {
             resizeMode = false;
             if (resizeGrip != null) resizeGrip.setVisibility(View.GONE);
         }
 
-        if (expand) {
-            params.flags &= ~WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
-        } else {
-            params.flags |=  WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
-        }
+        if (expand) params.flags &= ~WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+        else        params.flags |=  WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+
         if (windowManager != null && floatingView != null) {
-            try { windowManager.updateViewLayout(floatingView, params); }
-            catch (Throwable t) { Log.e(TAG, "update expand err", t); }
+            try { windowManager.updateViewLayout(floatingView, params); } catch (Throwable t) {}
+        }
+
+        // 🆕 Al expandir, ajustar viewport al tamaño actual
+        if (expand) {
+            floatingView.postDelayed(this::updateWebViewViewport, 300);
         }
     }
 
@@ -276,10 +277,8 @@ public class FloatingWindowService extends Service {
         webViewCreated = true;
         try {
             floatingWebView = floatingView.findViewById(R.id.floatingWebView);
-            if (floatingWebView == null) {
-                Log.e(TAG, "WebView view null");
-                return;
-            }
+            if (floatingWebView == null) return;
+
             WebSettings s = floatingWebView.getSettings();
             s.setJavaScriptEnabled(true);
             s.setDomStorageEnabled(true);
@@ -287,16 +286,31 @@ public class FloatingWindowService extends Service {
             s.setAllowFileAccess(true);
             s.setAllowContentAccess(true);
             s.setMediaPlaybackRequiresUserGesture(false);
-            s.setUseWideViewPort(true);
-            s.setLoadWithOverviewMode(true);
+            s.setUseWideViewPort(true);            // respeta meta viewport
+            s.setLoadWithOverviewMode(false);       // 🆕 NO auto-zoom (controlamos con JS)
             s.setUserAgentString("Mozilla/5.0 (Linux; Android 13; SM-S908B) AppleWebKit/537.36 " +
                     "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
-            floatingWebView.setWebViewClient(new WebViewClient());
+
+            // 🆕 JS bridge para empujar datos al widget
+            floatingWebView.addJavascriptInterface(new Object() {
+                @JavascriptInterface
+                public void updateSchedule(String json) {
+                    WidgetDataHelper.updateSchedule(FloatingWindowService.this, json);
+                }
+            }, "WidgetBridge");
+
+            floatingWebView.setWebViewClient(new WebViewClient() {
+                @Override
+                public void onPageFinished(WebView view, String url) {
+                    super.onPageFinished(view, url);
+                    // 🆕 Ajustar viewport cuando la página termina de cargar
+                    view.postDelayed(FloatingWindowService.this::updateWebViewViewport, 500);
+                }
+            });
             floatingWebView.loadUrl(APP_URL);
             Log.i(TAG, "WebView cargado");
         } catch (Throwable t) {
             Log.e(TAG, "WebView falló", t);
-            toast("⚠ WebView no cargó");
         }
     }
 
@@ -329,22 +343,16 @@ public class FloatingWindowService extends Service {
 
     private void toast(final String msg) {
         new Handler(Looper.getMainLooper()).post(() -> {
-            try {
-                Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
-            } catch (Throwable ignored) {}
+            try { Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show(); } catch (Throwable ignored) {}
         });
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        Log.i(TAG, "onDestroy");
         try { stopForeground(true); } catch (Throwable ignored) {}
         if (floatingWebView != null) {
-            try {
-                floatingWebView.loadUrl("about:blank");
-                floatingWebView.destroy();
-            } catch (Throwable ignored) {}
+            try { floatingWebView.loadUrl("about:blank"); floatingWebView.destroy(); } catch (Throwable ignored) {}
             floatingWebView = null;
         }
         if (floatingView != null && windowManager != null) {
