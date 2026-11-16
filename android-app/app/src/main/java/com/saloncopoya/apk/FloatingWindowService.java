@@ -5,6 +5,8 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ServiceInfo;
@@ -25,6 +27,7 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 import androidx.core.app.NotificationCompat;
 
@@ -43,12 +46,16 @@ public class FloatingWindowService extends Service {
     private LinearLayout panelContent;
     private WebView floatingWebView;
     private View resizeGrip;
+    private TextView bubbleIcon;
 
     private boolean webViewCreated = false;
     private boolean isExpanded = false;
     private boolean resizeMode = false;
     private long lastViewportUpdate = 0;
     private static final long VIEWPORT_THROTTLE_MS = 100;
+
+    // Estado de captura con scroll
+    private boolean scrollCaptureActive = false;
 
     @Override
     public void onCreate() {
@@ -87,6 +94,7 @@ public class FloatingWindowService extends Service {
         expandedRoot  = floatingView.findViewById(R.id.expandedRoot);
         panelContent  = floatingView.findViewById(R.id.panelContent);
         resizeGrip    = floatingView.findViewById(R.id.resizeGrip);
+        bubbleIcon    = floatingView.findViewById(R.id.bubbleIcon);
 
         int layoutType = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
                 ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
@@ -103,48 +111,47 @@ public class FloatingWindowService extends Service {
         params.x = 80;
         params.y = 200;
 
-        collapsedRoot.setOnClickListener(v -> setExpanded(true));
+        // 🔑 Burbuja: si está en modo captura → DETIENE y COPIA; si no → expande
+        collapsedRoot.setOnClickListener(v -> {
+            if (scrollCaptureActive) {
+                stopScrollCaptureAndCopy();
+            } else {
+                setExpanded(true);
+            }
+        });
+
         floatingView.findViewById(R.id.btnClose).setOnClickListener(v -> stopSelf());
         floatingView.findViewById(R.id.btnCollapse).setOnClickListener(v -> setExpanded(false));
 
+        // ========== BOTÓN COPIAR SIMPLE (una sola vez) ==========
+        floatingView.findViewById(R.id.btnCopyText).setOnClickListener(v -> {
+            if (scrollCaptureActive) {
+                toast("🔴 Detén la captura primero (toca la burbuja roja)");
+                return;
+            }
+            CopyTextAccessibilityService svc = CopyTextAccessibilityService.getInstance();
+            if (svc == null) {
+                abrirAjustesAccesibilidad();
+                return;
+            }
+            String text = svc.copyAllTextFromScreen();
+            if (text != null && !text.trim().isEmpty()) {
+                int lines = text.split("\n").length;
+                toast("✅ Copiadas " + lines + " líneas (" + text.length() + " chars)");
+            } else {
+                toast("⚠️ No se encontró texto");
+            }
+        });
 
-        // 🆕 Botón COPIAR TEXTO
-floatingView.findViewById(R.id.btnCopyText).setOnClickListener(v -> {
-    CopyTextAccessibilityService svc = CopyTextAccessibilityService.getInstance();
-    if (svc == null) {
-        Toast.makeText(this,
-            "⚠️ Activa el servicio en: Ajustes → Accesibilidad → Salon Copoya 2026",
-            Toast.LENGTH_LONG).show();
-        try {
-            Intent acc = new Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS);
-            acc.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(acc);
-        } catch (Exception e) {
-            Log.e(TAG, "No se pudo abrir accesibilidad", e);
-        }
-        return;
-    }
+        // ========== BOTÓN CAPTURA CON SCROLL ==========
+        floatingView.findViewById(R.id.btnScrollCapture).setOnClickListener(v -> {
+            if (scrollCaptureActive) {
+                stopScrollCaptureAndCopy();
+            } else {
+                startScrollCapture();
+            }
+        });
 
-    // 🔑 TRUCO CLAVE: ocultar la ventana flotante 200ms para que la app de abajo
-    // sea la ventana "activa" para el servicio de accesibilidad
-    floatingView.setAlpha(0.01f);   // casi invisible (no GONE para no perder el layout)
-
-    new Handler(Looper.getMainLooper()).postDelayed(() -> {
-        String text = svc.copyAllTextFromScreen();
-        floatingView.setAlpha(1f);  // restaurar visibilidad
-
-        if (text != null && !text.trim().isEmpty()) {
-            Toast.makeText(this,
-                "✅ Texto copiado (" + text.length() + " caracteres)",
-                Toast.LENGTH_SHORT).show();
-        } else {
-            Toast.makeText(this,
-                "⚠️ No se encontró texto. Abre la app con texto y vuelve a intentar.",
-                Toast.LENGTH_LONG).show();
-        }
-    }, 250);
-});
-        
         floatingView.findViewById(R.id.btnResizeToggle).setOnClickListener(v -> {
             resizeMode = !resizeMode;
             resizeGrip.setVisibility(resizeMode ? View.VISIBLE : View.GONE);
@@ -198,7 +205,68 @@ floatingView.findViewById(R.id.btnCopyText).setOnClickListener(v -> {
         }
     }
 
-    /** ═══ RESIZE con viewport responsive ═══ */
+    // ==================== MODO CAPTURA CON SCROLL ====================
+
+    private void startScrollCapture() {
+        CopyTextAccessibilityService svc = CopyTextAccessibilityService.getInstance();
+        if (svc == null) {
+            abrirAjustesAccesibilidad();
+            return;
+        }
+
+        scrollCaptureActive = true;
+
+        // Colapsar a burbuja y pintarla de rojo
+        setExpanded(false);
+        collapsedRoot.setBackgroundColor(0xFFE53935);   // rojo
+        bubbleIcon.setText("0");
+        bubbleIcon.setTextSize(16);
+
+        svc.startScrollCapture((lineCount, charCount) -> {
+            // Actualizar el contador en la burbuja
+            if (bubbleIcon != null) {
+                bubbleIcon.setText(String.valueOf(lineCount));
+            }
+        });
+
+        toast("🔴 SCROLL activo · Desliza la app → toca 🔴 para copiar");
+    }
+
+    private void stopScrollCaptureAndCopy() {
+        CopyTextAccessibilityService svc = CopyTextAccessibilityService.getInstance();
+        if (svc == null) return;
+
+        String text = svc.stopScrollCapture();
+        scrollCaptureActive = false;
+
+        // Restaurar apariencia de burbuja
+        collapsedRoot.setBackgroundResource(R.drawable.bg_bubble);
+        bubbleIcon.setText("⚡");
+        bubbleIcon.setTextSize(28);
+
+        if (text != null && !text.trim().isEmpty()) {
+            ClipboardManager cm = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+            cm.setPrimaryClip(ClipData.newPlainText("Captura scroll", text));
+            int lines = text.split("\n").length;
+            toast("✅ Copiadas " + lines + " líneas · " + text.length() + " chars");
+        } else {
+            toast("⚠️ No se capturó texto. ¿Deslizaste la app?");
+        }
+    }
+
+    private void abrirAjustesAccesibilidad() {
+        toast("⚠️ Activa el servicio en: Ajustes → Accesibilidad → Salon Copoya 2026");
+        try {
+            Intent acc = new Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS);
+            acc.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(acc);
+        } catch (Exception e) {
+            Log.e(TAG, "No se pudo abrir accesibilidad", e);
+        }
+    }
+
+    // ==================== RESIZE (sin cambios) ====================
+
     private void setupResize() {
         final float density = getResources().getDisplayMetrics().density;
         final int minW = (int)(180 * density);
@@ -237,11 +305,9 @@ floatingView.findViewById(R.id.btnCopyText).setOnClickListener(v -> {
                             ViewGroup.LayoutParams lpH = floatingWebView.getLayoutParams();
                             lpH.height = newH;
                             floatingWebView.setLayoutParams(lpH);
-                            // 🆕 Forzar re-layout inmediato
                             floatingWebView.requestLayout();
                         }
 
-                        // 🆕 Actualizar viewport (throttled)
                         long now = System.currentTimeMillis();
                         if (now - lastViewportUpdate > VIEWPORT_THROTTLE_MS) {
                             lastViewportUpdate = now;
@@ -250,7 +316,6 @@ floatingView.findViewById(R.id.btnCopyText).setOnClickListener(v -> {
                         return true;
 
                     case MotionEvent.ACTION_UP:
-                        // 🆕 Actualización final (sin throttle)
                         updateWebViewViewport();
                         return true;
                 }
@@ -259,11 +324,6 @@ floatingView.findViewById(R.id.btnCopyText).setOnClickListener(v -> {
         });
     }
 
-    /**
-     * 🔧 LA CLAVE DEL FIX: inyecta un <meta viewport> con el ancho EXACTO
-     *    en CSS px del WebView. Sin esto, el page usa device-width = ancho
-     *    del TELÉFONO, no del WebView, y se corta al hacer la ventana chica.
-     */
     private void updateWebViewViewport() {
         if (floatingWebView == null) return;
         final WebView wv = floatingWebView;
@@ -273,7 +333,6 @@ floatingView.findViewById(R.id.btnCopyText).setOnClickListener(v -> {
                 if (wPx <= 0) return;
                 float density = getResources().getDisplayMetrics().density;
                 int cssWidth = Math.max(200, Math.round(wPx / density));
-
                 String js = "(function(){" +
                         "var m=document.querySelector('meta[name=\"viewport\"]');" +
                         "if(!m){m=document.createElement('meta');m.setAttribute('name','viewport');document.head.appendChild(m);}" +
@@ -305,7 +364,6 @@ floatingView.findViewById(R.id.btnCopyText).setOnClickListener(v -> {
             try { windowManager.updateViewLayout(floatingView, params); } catch (Throwable t) {}
         }
 
-        // 🆕 Al expandir, ajustar viewport al tamaño actual
         if (expand) {
             floatingView.postDelayed(this::updateWebViewViewport, 300);
         }
@@ -324,12 +382,11 @@ floatingView.findViewById(R.id.btnCopyText).setOnClickListener(v -> {
             s.setAllowFileAccess(true);
             s.setAllowContentAccess(true);
             s.setMediaPlaybackRequiresUserGesture(false);
-            s.setUseWideViewPort(true);            // respeta meta viewport
-            s.setLoadWithOverviewMode(false);       // 🆕 NO auto-zoom (controlamos con JS)
+            s.setUseWideViewPort(true);
+            s.setLoadWithOverviewMode(false);
             s.setUserAgentString("Mozilla/5.0 (Linux; Android 13; SM-S908B) AppleWebKit/537.36 " +
                     "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
 
-            // 🆕 JS bridge para empujar datos al widget
             floatingWebView.addJavascriptInterface(new Object() {
                 @JavascriptInterface
                 public void updateSchedule(String json) {
@@ -341,12 +398,10 @@ floatingView.findViewById(R.id.btnCopyText).setOnClickListener(v -> {
                 @Override
                 public void onPageFinished(WebView view, String url) {
                     super.onPageFinished(view, url);
-                    // 🆕 Ajustar viewport cuando la página termina de cargar
                     view.postDelayed(FloatingWindowService.this::updateWebViewViewport, 500);
                 }
             });
             floatingWebView.loadUrl(APP_URL);
-            Log.i(TAG, "WebView cargado");
         } catch (Throwable t) {
             Log.e(TAG, "WebView falló", t);
         }
