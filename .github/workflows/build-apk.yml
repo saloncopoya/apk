@@ -18,6 +18,12 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      # 🔧 NUEVO: Instala y configura el SDK de Android (compileSdk 34)
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-34 build-tools;34.0.0'
+
       - name: Copy web files to Android assets
         run: |
           mkdir -p android-app/app/src/main/assets/www
