@@ -3,7 +3,7 @@
     android:layout_width="wrap_content"
     android:layout_height="wrap_content">
 
-    <!-- BURBUJA -->
+    <!-- ═══════ BURBUJA (64dp) ═══════ -->
     <FrameLayout
         android:id="@+id/collapsedRoot"
         android:layout_width="64dp"
@@ -21,102 +21,102 @@
             android:textColor="#FFFFFF"/>
     </FrameLayout>
 
-    <!-- PANEL -->
-    <LinearLayout
+    <!-- ═══════ PANEL EXPANDIDO ═══════ -->
+    <FrameLayout
         android:id="@+id/expandedRoot"
-        android:layout_width="320dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
         android:background="@drawable/bg_panel"
         android:elevation="12dp"
         android:clipToOutline="true"
         android:visibility="gone">
 
         <LinearLayout
-            android:id="@+id/dragHandle"
-            android:layout_width="match_parent"
-            android:layout_height="44dp"
-            android:background="#6200EE"
-            android:gravity="center_vertical"
-            android:paddingStart="12dp"
-            android:paddingEnd="4dp"
-            android:orientation="horizontal">
+            android:id="@+id/panelContent"
+            android:layout_width="320dp"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- HEADER compacto (32dp, sin botones inferiores) -->
+            <LinearLayout
+                android:id="@+id/dragHandle"
+                android:layout_width="match_parent"
+                android:layout_height="32dp"
+                android:background="#6200EE"
+                android:gravity="center_vertical"
+                android:paddingStart="10dp"
+                android:paddingEnd="2dp"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="⚡ App"
+                    android:textColor="#FFFFFF"
+                    android:textStyle="bold"
+                    android:textSize="12sp"/>
+
+                <!-- Botón para ACTIVAR/DESACTIVAR resize -->
+                <Button
+                    android:id="@+id/btnResizeToggle"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:text="⤢"
+                    android:textColor="#FFFFFF"
+                    android:textSize="14sp"
+                    android:background="?android:attr/selectableItemBackgroundBorderless"
+                    android:minWidth="0dp"
+                    android:padding="0dp"/>
+
+                <!-- Botón colapsar (volver a burbuja) -->
+                <Button
+                    android:id="@+id/btnCollapse"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:text="↓"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:background="?android:attr/selectableItemBackgroundBorderless"
+                    android:minWidth="0dp"
+                    android:padding="0dp"/>
+
+                <!-- Botón cerrar (apagar servicio) -->
+                <Button
+                    android:id="@+id/btnClose"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:text="✖"
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp"
+                    android:background="?android:attr/selectableItemBackgroundBorderless"
+                    android:minWidth="0dp"
+                    android:padding="0dp"/>
+            </LinearLayout>
+
+            <!-- WebView con tu app (sin barra inferior) -->
+            <WebView
+                android:id="@+id/floatingWebView"
+                android:layout_width="match_parent"
+                android:layout_height="380dp"/>
+        </LinearLayout>
+
+        <!-- GRIP de resize (esquina inferior-derecha, oculto por defecto) -->
+        <FrameLayout
+            android:id="@+id/resizeGrip"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_gravity="bottom|end"
+            android:background="#AA000000"
+            android:visibility="gone">
 
             <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="⚡ App Flotante"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:text="⇲"
                 android:textColor="#FFFFFF"
-                android:textStyle="bold"
-                android:textSize="14sp"/>
-
-            <Button
-                android:id="@+id/btnCollapse"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:text="↓"
-                android:textColor="#FFFFFF"
-                android:textSize="18sp"
-                android:background="?android:attr/selectableItemBackgroundBorderless"
-                android:minWidth="0dp"
-                android:padding="0dp"/>
-
-            <Button
-                android:id="@+id/btnClose"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:text="✖"
-                android:textColor="#FFFFFF"
-                android:textSize="16sp"
-                android:background="?android:attr/selectableItemBackgroundBorderless"
-                android:minWidth="0dp"
-                android:padding="0dp"/>
-        </LinearLayout>
-
-        <WebView
-            android:id="@+id/floatingWebView"
-            android:layout_width="match_parent"
-            android:layout_height="400dp"/>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:orientation="horizontal"
-            android:background="#F2F2F2"
-            android:gravity="center_vertical"
-            android:paddingStart="4dp"
-            android:paddingEnd="4dp">
-
-            <Button
-                android:id="@+id/btnNotify"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="🔔"
-                android:textSize="18sp"
-                android:minWidth="0dp"
-                android:background="?android:attr/selectableItemBackgroundBorderless"/>
-
-            <Button
-                android:id="@+id/btnRefresh"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="🔄"
-                android:textSize="18sp"
-                android:minWidth="0dp"
-                android:background="?android:attr/selectableItemBackgroundBorderless"/>
-
-            <Button
-                android:id="@+id/btnOpenApp"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="📱"
-                android:textSize="18sp"
-                android:minWidth="0dp"
-                android:background="?android:attr/selectableItemBackgroundBorderless"/>
-        </LinearLayout>
-    </LinearLayout>
+                android:textSize="20sp"/>
+        </FrameLayout>
+    </FrameLayout>
 </FrameLayout>
