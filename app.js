@@ -12013,31 +12013,38 @@ if (document.readyState === 'loading') {
 
   
 
-  /* ═══════════════════════════════════════════════════════════════
-   📲 WIDGET BRIDGE v2 · empuja la programación de HOY al widget
-   - Polling al inicio hasta que P tenga datos (no sobreescribe con [])
-   - Reintenta cada 2s por 3 min
-   - Envía también en visibilitychange y cada 60s
+ /* ═══════════════════════════════════════════════════════════════
+   📲 WIDGET BRIDGE v3.1 · soporta cualquier formato de fecha
    ═══════════════════════════════════════════════════════════════ */
+
+function __normalizeDate(v) {
+  if (!v) return '';
+  if (v instanceof Date) {
+    return `${v.getFullYear()}-${String(v.getMonth()+1).padStart(2,'0')}-${String(v.getDate()).padStart(2,'0')}`;
+  }
+  const s = String(v).trim();
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return s;
+  m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  m = s.match(/^(\d{4})[\/\-](\d{2})[\/\-](\d{2})$/);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  return s;
+}
+
 function __pushScheduleToWidget() {
-  if (!window.WidgetBridge) {
-    console.log('[widget push] ⚠ WidgetBridge no existe (¿corriendo en navegador?)');
-    return false;
-  }
-  if (!P || typeof P !== 'object' || Object.keys(P).length === 0) {
-    console.log('[widget push] ⏳ P aún vacío, esperando...');
-    return false;   // 🔑 NO enviar [] si P no ha cargado
-  }
+  if (!window.WidgetBridge) { console.log('[widget push] ⚠ WidgetBridge no existe'); return false; }
+  if (!P || typeof P !== 'object' || Object.keys(P).length === 0) { return false; }
 
   try {
-    const t = (typeof today === 'function') ? today() :
-              (() => { const d = new Date();
-                return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
-
+    const d = new Date();
+    const t = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     const arr = [];
     for (const id in P) {
       const p = P[id];
-      if (!p || p.prog_fecha !== t) continue;
+      if (!p) continue;
+      const pFecha = __normalizeDate(p.prog_fecha);
+      if (pFecha !== t) continue;
       arr.push({
         id,
         n: p.nombre || '',
@@ -12047,55 +12054,45 @@ function __pushScheduleToWidget() {
       });
     }
     arr.sort((a, b) => a.n.localeCompare(b.n, 'es'));
-
     WidgetBridge.updateSchedule(JSON.stringify(arr));
-    console.log('[widget push] ✅ OK · ' + arr.length + ' programados · ' + JSON.stringify(arr.slice(0, 2)));
+    console.log('[widget push] ✅ ' + arr.length + ' programados');
     return true;
-  } catch (e) {
-    console.warn('[widget push] ❌ error:', e);
-    return false;
-  }
+  } catch (e) { console.warn('[widget push] ❌', e); return false; }
 }
 
-/* Polling: reintenta cada 2s hasta 90 intentos (3 minutos) */
-let __pushTry = 0;
-function __pushLoop() {
-  if (__pushScheduleToWidget()) return;   // éxito → detener
-  if (__pushTry++ >= 90) {
-    console.warn('[widget push] ⛔ desisto tras 3 min. P=' + (typeof P === 'object' ? Object.keys(P).length : '?'));
-    return;
-  }
-  setTimeout(__pushLoop, 2000);
-}
-
-/* Abrir paciente desde el widget */
 window.__openPatientFromWidget = function (pid) {
   try {
     if (typeof openDetail === 'function') return openDetail(pid);
     if (typeof openD === 'function') return openD(pid);
     if (typeof showDetail === 'function') return showDetail(pid);
     if (typeof cur !== 'undefined' && typeof tab === 'function' && P[pid]) {
-      cur = pid;
-      tab(0, true);
+      cur = pid; tab(0, true);
       const det = document.querySelector('#detail');
       if (det) det.hidden = false;
     }
   } catch (e) { console.warn('[widget open]', e); }
 };
 
-/* Arrancar polling al cargar */
+/* Reintento agresivo: 2s x 60 intentos (2 min) → luego 10s → luego 60s */
+let __pushTry = 0;
+function __pushLoop() {
+  if (__pushScheduleToWidget()) { __pushTry = 0; return; }
+  __pushTry++;
+  let delay = 2000;
+  if (__pushTry > 60) delay = 10000;
+  if (__pushTry > 120) delay = 60000;
+  setTimeout(__pushLoop, delay);
+}
+
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => setTimeout(__pushLoop, 1000));
 } else {
   setTimeout(__pushLoop, 1000);
 }
 
-/* Re-push al volver a la app */
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') setTimeout(__pushScheduleToWidget, 800);
 });
-
-/* Re-push periódico por si dejan la app abierta */
 setInterval(__pushScheduleToWidget, 60000);
 
   
