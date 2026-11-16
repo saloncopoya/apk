@@ -7,7 +7,6 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.webkit.ConsoleMessage;
 import android.webkit.CookieManager;
 import android.webkit.GeolocationPermissions;
 import android.webkit.PermissionRequest;
@@ -21,8 +20,6 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.webkit.WebViewAssetLoader;
-import androidx.webkit.WebViewClientCompat;
 
 public class MainActivity extends AppCompatActivity {
     private WebView webView;
@@ -44,18 +41,13 @@ public class MainActivity extends AppCompatActivity {
         settings.setDatabaseEnabled(true);
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(true);
-        
-        // 🔥 PERMISOS EXTRA PARA QUE EL LOGIN Y LAS FOTOS FUNCIONEN
-        settings.setAllowFileAccessFromFileURLs(true);
-        settings.setAllowUniversalAccessFromFileURLs(true);
-
         settings.setGeolocationEnabled(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setUseWideViewPort(true);
         settings.setLoadWithOverviewMode(true);
         settings.setJavaScriptCanOpenWindowsAutomatically(true); 
 
-        // 🔥 Hacerse pasar por un Chrome real (evita bloqueos de Cloudflare/Firebase)
+        // 🔥 Hacerse pasar por un Chrome real (evita bloqueos de Cloudflare)
         settings.setUserAgentString("Mozilla/5.0 (Linux; Android 13; SM-S908B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
 
         // 🔥 Habilitar Cookies para que la sesión no se cierre
@@ -67,27 +59,8 @@ public class MainActivity extends AppCompatActivity {
             settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         }
 
-        final WebViewAssetLoader assetLoader = new WebViewAssetLoader.Builder()
-                .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
-                .build();
-
-        webView.setWebViewClient(new WebViewClientCompat() {
-            @Override
-            public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
-                return assetLoader.shouldInterceptRequest(request.getUrl());
-            }
-
-            @Override
-            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                String url = request.getUrl().toString();
-                if (url.startsWith("whatsapp://") || url.startsWith("mailto:") || url.startsWith("tel:")) {
-                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                    startActivity(intent);
-                    return true;
-                }
-                return false;
-            }
-        });
+        // 🔥 AQUÍ CARGAMOS DESDE EL SERVIDOR REAL (Soluciona el CORS del login)
+        webView.loadUrl("https://255-255-255-0x7f000001.pages.dev/index.html");
 
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
@@ -99,18 +72,7 @@ public class MainActivity extends AppCompatActivity {
             public void onPermissionRequest(final PermissionRequest request) {
                 runOnUiThread(() -> request.grant(request.getResources()));
             }
-
-            // 🔥 ESTO NOS DIRÁ EL ERROR EXACTO SI EL LOGIN FALLA
-            @Override
-            public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
-                if (consoleMessage.messageLevel() == ConsoleMessage.MessageLevel.ERROR) {
-                    Toast.makeText(MainActivity.this, "Error JS: " + consoleMessage.message(), Toast.LENGTH_LONG).show();
-                }
-                return super.onConsoleMessage(consoleMessage);
-            }
         });
-
-        webView.loadUrl("https://appassets.androidplatform.net/assets/www/index.html");
     }
 
     private void pedirPermisos() {
