@@ -60,9 +60,9 @@
              SERVICIO DE ACCESIBILIDAD · COPIAR TEXTO DE OTRAS APPS
              ═══════════════════════════════════════════════════════════ -->
         <service
-            android:name=".CopyTextAccessibilityService"
-            android:exported="false"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+    android:name=".CopyTextAccessibilityService"
+    android:exported="true"
+    android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
             </intent-filter>
