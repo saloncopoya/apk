@@ -3,7 +3,7 @@
     android:layout_width="wrap_content"
     android:layout_height="wrap_content">
 
-    <!-- ═══════════ ESTADO 1: BURBUJA (64dp) ═══════════ -->
+    <!-- BURBUJA -->
     <FrameLayout
         android:id="@+id/collapsedRoot"
         android:layout_width="64dp"
@@ -21,7 +21,7 @@
             android:textColor="#FFFFFF"/>
     </FrameLayout>
 
-    <!-- ═══════════ ESTADO 2: PANEL EXPANDIDO ═══════════ -->
+    <!-- PANEL -->
     <LinearLayout
         android:id="@+id/expandedRoot"
         android:layout_width="320dp"
@@ -32,7 +32,6 @@
         android:clipToOutline="true"
         android:visibility="gone">
 
-        <!-- Header arrastrable -->
         <LinearLayout
             android:id="@+id/dragHandle"
             android:layout_width="match_parent"
@@ -75,13 +74,11 @@
                 android:padding="0dp"/>
         </LinearLayout>
 
-        <!-- WebView con TU APP adentro -->
         <WebView
             android:id="@+id/floatingWebView"
             android:layout_width="match_parent"
             android:layout_height="400dp"/>
 
-        <!-- Barra de acciones rápidas -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="56dp"
@@ -90,16 +87,6 @@
             android:gravity="center_vertical"
             android:paddingStart="4dp"
             android:paddingEnd="4dp">
-
-            <Button
-                android:id="@+id/btnVibrate"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="📳"
-                android:textSize="18sp"
-                android:minWidth="0dp"
-                android:background="?android:attr/selectableItemBackgroundBorderless"/>
 
             <Button
                 android:id="@+id/btnNotify"
