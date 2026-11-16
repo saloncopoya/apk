@@ -1746,6 +1746,23 @@ img{max-width:100%}
 <script src="/js/db-offline.js" defer></script>
 <script src="/js/tile-cache.js" defer></script>
 <script src="/app.js" defer></script>
-  
+
+  <!-- 🔥 FORZAR FUNCIONAMIENTO DEL BOTÓN DE LOGIN EN LA APK -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const btn = document.getElementById('lgo');
+    if (btn) {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault(); 
+        // Simulamos el submit del formulario para que app.js lo capture
+        const form = document.getElementById('loginForm');
+        if (form) {
+          const event = new Event('submit', { cancelable: true, bubbles: true });
+          form.dispatchEvent(event);
+        }
+      });
+    }
+  });
+</script>
 </body>
 </html>
