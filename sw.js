@@ -10,7 +10,7 @@ const PRECACHE = [
   '/index.html',
     '/inegi.html',
   '/404.html',
-   '/app.js',
+  
   '/offline.html',
   '/manifest.json',
   '/img.png',
