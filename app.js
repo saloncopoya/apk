@@ -12011,15 +12011,29 @@ if (document.readyState === 'loading') {
   }
   
 
+  
+
   /* ═══════════════════════════════════════════════════════════════
-   📲 WIDGET BRIDGE · empuja la programación de HOY al widget
+   📲 WIDGET BRIDGE v2 · empuja la programación de HOY al widget
+   - Polling al inicio hasta que P tenga datos (no sobreescribe con [])
+   - Reintenta cada 2s por 3 min
+   - Envía también en visibilitychange y cada 60s
    ═══════════════════════════════════════════════════════════════ */
 function __pushScheduleToWidget() {
-  if (!window.WidgetBridge) return;
+  if (!window.WidgetBridge) {
+    console.log('[widget push] ⚠ WidgetBridge no existe (¿corriendo en navegador?)');
+    return false;
+  }
+  if (!P || typeof P !== 'object' || Object.keys(P).length === 0) {
+    console.log('[widget push] ⏳ P aún vacío, esperando...');
+    return false;   // 🔑 NO enviar [] si P no ha cargado
+  }
+
   try {
     const t = (typeof today === 'function') ? today() :
               (() => { const d = new Date();
                 return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
+
     const arr = [];
     for (const id in P) {
       const p = P[id];
@@ -12033,17 +12047,33 @@ function __pushScheduleToWidget() {
       });
     }
     arr.sort((a, b) => a.n.localeCompare(b.n, 'es'));
+
     WidgetBridge.updateSchedule(JSON.stringify(arr));
-  } catch (e) { console.warn('[widget push]', e); }
+    console.log('[widget push] ✅ OK · ' + arr.length + ' programados · ' + JSON.stringify(arr.slice(0, 2)));
+    return true;
+  } catch (e) {
+    console.warn('[widget push] ❌ error:', e);
+    return false;
+  }
 }
 
-/* Función que llama Android al tocar una fila del widget */
+/* Polling: reintenta cada 2s hasta 90 intentos (3 minutos) */
+let __pushTry = 0;
+function __pushLoop() {
+  if (__pushScheduleToWidget()) return;   // éxito → detener
+  if (__pushTry++ >= 90) {
+    console.warn('[widget push] ⛔ desisto tras 3 min. P=' + (typeof P === 'object' ? Object.keys(P).length : '?'));
+    return;
+  }
+  setTimeout(__pushLoop, 2000);
+}
+
+/* Abrir paciente desde el widget */
 window.__openPatientFromWidget = function (pid) {
   try {
     if (typeof openDetail === 'function') return openDetail(pid);
     if (typeof openD === 'function') return openD(pid);
     if (typeof showDetail === 'function') return showDetail(pid);
-    // fallback: setear cur y tab
     if (typeof cur !== 'undefined' && typeof tab === 'function' && P[pid]) {
       cur = pid;
       tab(0, true);
@@ -12053,16 +12083,21 @@ window.__openPatientFromWidget = function (pid) {
   } catch (e) { console.warn('[widget open]', e); }
 };
 
-/* Push al cargar + al volver a la app */
-document.addEventListener('DOMContentLoaded', () => {
-  setTimeout(__pushScheduleToWidget, 2000);
-});
+/* Arrancar polling al cargar */
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => setTimeout(__pushLoop, 1000));
+} else {
+  setTimeout(__pushLoop, 1000);
+}
+
+/* Re-push al volver a la app */
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') setTimeout(__pushScheduleToWidget, 800);
 });
-/* Push cada 60s por si el usuario deja la app abierta */
+
+/* Re-push periódico por si dejan la app abierta */
 setInterval(__pushScheduleToWidget, 60000);
 
-
+  
   
 })();
