@@ -1,5 +1,8 @@
 package com.saloncopoya.apk;
 
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Intent;
 import android.graphics.PixelFormat;
@@ -13,9 +16,12 @@ import android.view.WindowManager;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.Toast;
+import androidx.core.app.NotificationCompat;
 
 public class FloatingWindowService extends Service {
+    private static final String CHANNEL_ID = "floating_window_channel";
+    private static final int NOTIFICATION_ID = 1001;
+
     private WindowManager windowManager;
     private View floatingView;
     private WindowManager.LayoutParams params;
@@ -28,25 +34,25 @@ public class FloatingWindowService extends Service {
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         floatingView = LayoutInflater.from(this).inflate(R.layout.floating_window, null);
 
-        // 1. Configurar la ventana
+        // 1. Configurar la ventana flotante
         int layoutType = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ?
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY :
                 WindowManager.LayoutParams.TYPE_PHONE;
 
         params = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
-                WindowManager.LayoutParams.MATCH_PARENT, // Tamaño inicial
+                WindowManager.LayoutParams.MATCH_PARENT,
                 layoutType,
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
                 PixelFormat.TRANSLUCENT);
-        
+
         params.gravity = Gravity.TOP | Gravity.START;
         params.x = 50;
         params.y = 100;
         params.width = 800;
         params.height = 1200;
 
-        // 2. Cargar la página web
+        // 2. WebView dentro de la ventana
         webView = floatingView.findViewById(R.id.floating_webview);
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
@@ -55,9 +61,9 @@ public class FloatingWindowService extends Service {
         webView.setWebViewClient(new WebViewClient());
         webView.loadUrl("https://255-255-255-0x7f000001.pages.dev/");
 
-        // 3. Configurar botones
+        // 3. Botones
         floatingView.findViewById(R.id.btn_close).setOnClickListener(v -> stopSelf());
-        
+
         floatingView.findViewById(R.id.btn_resize).setOnClickListener(v -> {
             isSmall = !isSmall;
             if (isSmall) {
@@ -70,7 +76,7 @@ public class FloatingWindowService extends Service {
             windowManager.updateViewLayout(floatingView, params);
         });
 
-        // 4. Configurar arrastre (Drag)
+        // 4. Arrastre
         View dragHandle = floatingView.findViewById(R.id.drag_handle);
         dragHandle.setOnTouchListener(new View.OnTouchListener() {
             private int initialX, initialY;
@@ -95,15 +101,44 @@ public class FloatingWindowService extends Service {
             }
         });
 
+        // 5. Añadir la vista al WindowManager
         windowManager.addView(floatingView, params);
+
+        // 🔥 6. Pasar a foreground (obligatorio para servicios en Android 8+)
+        startForeground(NOTIFICATION_ID, crearNotificacion());
+    }
+
+    private Notification crearNotificacion() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    CHANNEL_ID,
+                    "Ventana Flotante",
+                    NotificationManager.IMPORTANCE_LOW
+            );
+            NotificationManager manager = getSystemService(NotificationManager.class);
+            if (manager != null) manager.createNotificationChannel(channel);
+        }
+
+        return new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setContentTitle("Ventana Flotante Activa")
+                .setContentText("La app se está mostrando sobre otras aplicaciones")
+                .setSmallIcon(android.R.drawable.ic_menu_compass)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .build();
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        if (floatingView != null) windowManager.removeView(floatingView);
+        if (floatingView != null && windowManager != null) {
+            try {
+                windowManager.removeView(floatingView);
+            } catch (Exception ignored) {}
+        }
     }
 
     @Override
-    public IBinder onBind(Intent intent) { return null; }
+    public IBinder onBind(Intent intent) {
+        return null;
+    }
 }
