@@ -12,11 +12,9 @@ import android.webkit.GeolocationPermissions;
 import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
-import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
-import android.widget.Toast;
-import androidx.annotation.NonNull;
+import android.webkit.WebViewClient;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -24,6 +22,9 @@ import androidx.core.content.ContextCompat;
 public class MainActivity extends AppCompatActivity {
     private WebView webView;
     private static final int PERMISSION_REQUEST_CODE = 1001;
+
+    // 🔥 TU URL REAL
+    private static final String APP_URL = "https://255-255-255-0x7f000001.pages.dev/index.html";
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -47,10 +48,10 @@ public class MainActivity extends AppCompatActivity {
         settings.setLoadWithOverviewMode(true);
         settings.setJavaScriptCanOpenWindowsAutomatically(true); 
 
-        // 🔥 Hacerse pasar por un Chrome real (evita bloqueos de Cloudflare)
+        // Hacerse pasar por un navegador real
         settings.setUserAgentString("Mozilla/5.0 (Linux; Android 13; SM-S908B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
 
-        // 🔥 Habilitar Cookies para que la sesión no se cierre
+        // Habilitar Cookies para que el Login no se pierda
         CookieManager cookieManager = CookieManager.getInstance();
         cookieManager.setAcceptCookie(true);
         cookieManager.setAcceptThirdPartyCookies(webView, true);
@@ -59,8 +60,27 @@ public class MainActivity extends AppCompatActivity {
             settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         }
 
-        // 🔥 AQUÍ CARGAMOS DESDE EL SERVIDOR REAL (Soluciona el CORS del login)
-        webView.loadUrl("https://255-255-255-0x7f000001.pages.dev/index.html");
+        // 🔥 ESTO EVITA QUE SE ABRA EN EL NAVEGADOR
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                String url = request.getUrl().toString();
+                
+                // Si es tu página, mantenerlo DENTRO de la app
+                if (url.startsWith("https://255-255-255-0x7f000001.pages.dev")) {
+                    return false; 
+                }
+                
+                // Si es WhatsApp, teléfono, etc., abrir la app externa
+                try {
+                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                    startActivity(intent);
+                    return true;
+                } catch (Exception e) {
+                    return false;
+                }
+            }
+        });
 
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
@@ -73,6 +93,9 @@ public class MainActivity extends AppCompatActivity {
                 runOnUiThread(() -> request.grant(request.getResources()));
             }
         });
+
+        // Cargar la URL desde internet
+        webView.loadUrl(APP_URL);
     }
 
     private void pedirPermisos() {
