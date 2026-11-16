@@ -34,23 +34,49 @@ public class FloatingWindowService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        try {
-            // 1. Canal + notificación primero (evita crash si algo más falla)
-            crearCanalNotificacion();
-            Notification notification = construirNotificacion();
+        Log.i(TAG, "onCreate: servicio iniciado, SDK=" + Build.VERSION.SDK_INT);
 
-            // 2. Entrar en foreground de inmediato
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        // 1. Crear canal de notificación (necesario antes de startForeground)
+        crearCanalNotificacion();
+        Notification notification = construirNotificacion();
+
+        // 2. Entrar en foreground — LA CLAVE: SPECIAL_USE solo existe desde API 34
+        boolean fgOk = false;
+        try {
+            if (Build.VERSION.SDK_INT >= 34) {
+                // Android 14+: usar tipo explícito SPECIAL_USE
                 startForeground(
                         NOTIFICATION_ID,
                         notification,
                         ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
                 );
+                Log.i(TAG, "startForeground OK con SPECIAL_USE (API 34+)");
             } else {
+                // Android 13 y anteriores: el tipo SPECIAL_USE NO existe
+                // → usar la versión de 2 argumentos (usa lo declarado en manifest)
                 startForeground(NOTIFICATION_ID, notification);
+                Log.i(TAG, "startForeground OK con 2-args (API < 34)");
             }
+            fgOk = true;
+        } catch (Exception e) {
+            Log.e(TAG, "startForeground falló con tipo explícito, reintentando 2-args", e);
+            try {
+                startForeground(NOTIFICATION_ID, notification);
+                fgOk = true;
+                Log.i(TAG, "startForeground OK en fallback 2-args");
+            } catch (Exception e2) {
+                Log.e(TAG, "startForeground fallback también falló", e2);
+            }
+        }
 
-            // 3. Ahora sí, montar la ventana flotante
+        if (!fgOk) {
+            Log.e(TAG, "No se pudo entrar en foreground, el sistema matará el servicio. Abortando.");
+            stopSelf();
+            return;
+        }
+
+        // 3. Ahora sí, montar la ventana flotante
+        try {
             windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
             floatingView = LayoutInflater.from(this).inflate(R.layout.floating_window, null);
 
@@ -59,8 +85,8 @@ public class FloatingWindowService extends Service {
                     WindowManager.LayoutParams.TYPE_PHONE;
 
             params = new WindowManager.LayoutParams(
-                    WindowManager.LayoutParams.MATCH_PARENT,
-                    WindowManager.LayoutParams.MATCH_PARENT,
+                    WindowManager.LayoutParams.WRAP_CONTENT,
+                    WindowManager.LayoutParams.WRAP_CONTENT,
                     layoutType,
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
                     PixelFormat.TRANSLUCENT);
@@ -75,7 +101,9 @@ public class FloatingWindowService extends Service {
             WebSettings settings = webView.getSettings();
             settings.setJavaScriptEnabled(true);
             settings.setDomStorageEnabled(true);
-            settings.setUserAgentString("Mozilla/5.0 (Linux; Android 13; SM-S908B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
+            settings.setUserAgentString(
+                    "Mozilla/5.0 (Linux; Android 13; SM-S908B) AppleWebKit/537.36 " +
+                    "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
             webView.setWebViewClient(new WebViewClient());
             webView.loadUrl("https://255-255-255-0x7f000001.pages.dev/");
 
@@ -113,8 +141,10 @@ public class FloatingWindowService extends Service {
             });
 
             windowManager.addView(floatingView, params);
+            Log.i(TAG, "Ventana flotante añadida al WindowManager");
+
         } catch (Exception e) {
-            Log.e(TAG, "Error al crear ventana flotante", e);
+            Log.e(TAG, "Error al añadir la ventana flotante (¿falta permiso SYSTEM_ALERT_WINDOW?)", e);
             stopSelf();
         }
     }
@@ -126,6 +156,7 @@ public class FloatingWindowService extends Service {
                     "Ventana Flotante",
                     NotificationManager.IMPORTANCE_LOW
             );
+            channel.setDescription("Notificación del servicio de ventana flotante");
             NotificationManager manager = getSystemService(NotificationManager.class);
             if (manager != null) manager.createNotificationChannel(channel);
         }
@@ -144,6 +175,7 @@ public class FloatingWindowService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        Log.i(TAG, "onDestroy: cerrando servicio");
         if (floatingView != null && windowManager != null) {
             try {
                 windowManager.removeView(floatingView);
