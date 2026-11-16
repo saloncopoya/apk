@@ -1,67 +1,135 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="#FFFFFF"
-    android:elevation="12dp">
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content">
 
-    <!-- Barra de arrastre superior -->
-    <LinearLayout
-        android:id="@+id/drag_handle"
-        android:layout_width="match_parent"
-        android:layout_height="40dp"
-        android:background="#6200EE"
-        android:gravity="center_vertical"
-        android:paddingHorizontal="8dp"
-        android:orientation="horizontal">
-        
+    <!-- ═══════════ ESTADO 1: BURBUJA (64dp) ═══════════ -->
+    <FrameLayout
+        android:id="@+id/collapsedRoot"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:background="@drawable/bg_bubble"
+        android:elevation="8dp"
+        android:visibility="visible">
+
         <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="App Flotante"
-            android:textColor="#FFFFFF"
-            android:textStyle="bold"
-            android:textSize="14sp"/>
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:text="⚡"
+            android:textSize="28sp"
+            android:textColor="#FFFFFF"/>
+    </FrameLayout>
 
-        <!-- Botón para cambiar tamaño -->
-        <Button
-            android:id="@+id/btn_resize"
-            android:layout_width="wrap_content"
-            android:layout_height="30dp"
-            android:text="⤢"
-            android:textColor="#FFFFFF"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:minWidth="0dp" />
+    <!-- ═══════════ ESTADO 2: PANEL EXPANDIDO ═══════════ -->
+    <LinearLayout
+        android:id="@+id/expandedRoot"
+        android:layout_width="320dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_panel"
+        android:elevation="12dp"
+        android:clipToOutline="true"
+        android:visibility="gone">
 
-        <!-- Botón minimizar -->
-        <Button
-            android:id="@+id/btn_minimize"
-            android:layout_width="wrap_content"
-            android:layout_height="30dp"
-            android:text="↓"
-            android:textColor="#FFFFFF"
-            android:textSize="18sp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:minWidth="0dp" />
+        <!-- Header arrastrable -->
+        <LinearLayout
+            android:id="@+id/dragHandle"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:background="#6200EE"
+            android:gravity="center_vertical"
+            android:paddingStart="12dp"
+            android:paddingEnd="4dp"
+            android:orientation="horizontal">
 
-        <!-- Botón cerrar -->
-        <Button
-            android:id="@+id/btn_close"
-            android:layout_width="wrap_content"
-            android:layout_height="30dp"
-            android:text="✖"
-            android:textColor="#FFFFFF"
-            android:textSize="16sp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:minWidth="0dp" />
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="⚡ App Flotante"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold"
+                android:textSize="14sp"/>
+
+            <Button
+                android:id="@+id/btnCollapse"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:text="↓"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:minWidth="0dp"
+                android:padding="0dp"/>
+
+            <Button
+                android:id="@+id/btnClose"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:text="✖"
+                android:textColor="#FFFFFF"
+                android:textSize="16sp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:minWidth="0dp"
+                android:padding="0dp"/>
+        </LinearLayout>
+
+        <!-- WebView con TU APP adentro -->
+        <WebView
+            android:id="@+id/floatingWebView"
+            android:layout_width="match_parent"
+            android:layout_height="400dp"/>
+
+        <!-- Barra de acciones rápidas -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:orientation="horizontal"
+            android:background="#F2F2F2"
+            android:gravity="center_vertical"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp">
+
+            <Button
+                android:id="@+id/btnVibrate"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="📳"
+                android:textSize="18sp"
+                android:minWidth="0dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"/>
+
+            <Button
+                android:id="@+id/btnNotify"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="🔔"
+                android:textSize="18sp"
+                android:minWidth="0dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"/>
+
+            <Button
+                android:id="@+id/btnRefresh"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="🔄"
+                android:textSize="18sp"
+                android:minWidth="0dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"/>
+
+            <Button
+                android:id="@+id/btnOpenApp"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="📱"
+                android:textSize="18sp"
+                android:minWidth="0dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"/>
+        </LinearLayout>
     </LinearLayout>
-
-    <!-- La página web adentro -->
-    <WebView
-        android:id="@+id/floating_webview"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
-
-</LinearLayout>
+</FrameLayout>
